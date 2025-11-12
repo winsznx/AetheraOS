@@ -153,6 +153,10 @@ architecture.md
 INTEGRATION_GUIDE.md
 frontend architecture.md
 
+# Frontend documentation (except README)
+frontend/*.md
+!frontend/README.md
+
 # Don't ignore these important files
 !.gitignore
 !.env.example
