@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  color: #000000;
+  background-color: #ffffff;
+}
+
+body.dark {
+  color: #D1D0D0;
+  background-color: #000000;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+}
+
+code, pre {
+  font-family: 'Space Mono', monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #e5e7eb;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Dark mode transition */
+* {
+  @apply transition-colors duration-200;
+}
+
+/* Prevent FOUC (Flash of Unstyled Content) during theme initialization */
+html.dark {
+  color-scheme: dark;
+}
+
+/* Animation utilities */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.6s ease-out;
+}
+
+/* Utility classes */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Focus visible styles for accessibility */
+*:focus-visible {
+  outline: 2px solid #5C4E4E;
+  outline-offset: 2px;
+}
+
+/**
+ * AetheraOS Color System Utilities
+ *
+ * Brand Colors (use as Tailwind classes):
+ * - text-brand-black, bg-brand-black, border-brand-black
+ * - text-brand-light, bg-brand-light, border-brand-light
+ * - text-brand-gray, bg-brand-gray, border-brand-gray
+ * - text-brand-dark, bg-brand-dark, border-brand-dark
+ */
+
+/* Component-specific utility classes */
+@layer components {
+  .section-primary {
+    @apply bg-white dark:bg-gray-900;
+  }
+
+  .section-secondary {
+    @apply bg-gray-50 dark:bg-gray-800;
+  }
+
+  .card-base {
+    @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md;
+  }
+
+  .button-primary {
+    @apply bg-brand-black text-white hover:bg-brand-dark dark:bg-white dark:text-brand-black dark:hover:bg-brand-light transition-colors;
+  }
+
+  .button-secondary {
+    @apply bg-gray-100 text-brand-black hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 transition-colors;
+  }
+
+  .button-outline {
+    @apply border-2 border-brand-black text-brand-black hover:bg-gray-100 dark:border-white dark:text-white dark:hover:bg-gray-800 transition-colors;
+  }
+
+  .icon-container {
+    @apply bg-brand-black dark:bg-white rounded-lg p-3 flex items-center justify-center;
+  }
+
+  .text-primary {
+    @apply text-brand-black dark:text-white;
+  }
+
+  .text-secondary {
+    @apply text-brand-gray dark:text-gray-400;
+  }
+
+  .hover-lift {
+    @apply hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300;
+  }
+}
