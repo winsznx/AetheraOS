@@ -21,7 +21,7 @@
     "@types/node": "^22.10.1",
     "typescript": "^5.7.2",
     "vitest": "^2.1.5",
-    "wrangler": "^3.94.0"
+    "wrangler": "^3.114.15"
   },
   "keywords": [
     "mcp",
