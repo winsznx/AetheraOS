@@ -1,0 +1,20 @@
+{
+  "name": "prediction-market-agent",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-11-01",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MCP_SERVER",
+        "class_name": "PredictionMarketMcpServer",
+        "script_name": "prediction-market-agent"
+      }
+    ]
+  },
+  "[[migrations]]": [
+    {
+      "tag": "v1",
+      "new_classes": ["PredictionMarketMcpServer"]
+    }
+  ]
+}
