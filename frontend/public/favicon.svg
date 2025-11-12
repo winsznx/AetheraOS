@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="#000000"/>
+
+  <!-- CPU Icon Design -->
+  <!-- Central square -->
+  <rect x="11" y="11" width="10" height="10" rx="1" fill="#FFFFFF"/>
+
+  <!-- Small corner squares (representing CPU pins) -->
+  <rect x="8" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="22" y="8" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="8" y="22" width="2" height="2" fill="#FFFFFF"/>
+  <rect x="22" y="22" width="2" height="2" fill="#FFFFFF"/>
+
+  <!-- Connection lines -->
+  <line x1="9" y1="9" x2="11" y2="11" stroke="#FFFFFF" stroke-width="1"/>
+  <line x1="23" y1="9" x2="21" y2="11" stroke="#FFFFFF" stroke-width="1"/>
+  <line x1="9" y1="23" x2="11" y2="21" stroke="#FFFFFF" stroke-width="1"/>
+  <line x1="23" y1="23" x2="21" y2="21" stroke="#FFFFFF" stroke-width="1"/>
+</svg>
