@@ -145,6 +145,14 @@ out/
 # Sentry
 .sentryclirc
 
+# Workflow and personal documentation
+docs.md
+docs2.md
+docs3.md
+architecture.md
+INTEGRATION_GUIDE.md
+frontend architecture.md
+
 # Don't ignore these important files
 !.gitignore
 !.env.example
