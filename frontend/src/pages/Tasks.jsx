@@ -24,45 +24,86 @@ export default function Tasks() {
   }, [initTheme]);
 
   const loadTasks = async () => {
-    // Mock tasks data
-    const mockTasks = [
-      {
-        id: '1',
-        title: 'Data Analysis Task',
-        description: 'Analyze user behavior patterns',
-        budget: '0.05',
-        status: 'OPEN',
-        requiredCapabilities: ['data-analysis', 'python'],
-        createdAt: new Date().toISOString(),
-        deadline: new Date(Date.now() + 7 * 86400000).toISOString()
-      },
-      {
-        id: '2',
-        title: 'Content Generation',
-        description: 'Generate blog posts about AI',
-        budget: '0.03',
-        status: 'IN_PROGRESS',
-        requiredCapabilities: ['writing', 'seo'],
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        deadline: new Date(Date.now() + 3 * 86400000).toISOString()
-      },
-      {
-        id: '3',
-        title: 'Code Review',
-        description: 'Review React components',
-        budget: '0.08',
-        status: 'COMPLETED',
-        requiredCapabilities: ['coding', 'react'],
-        createdAt: new Date(Date.now() - 172800000).toISOString(),
-        deadline: new Date(Date.now() - 86400000).toISOString()
+    try {
+      // TODO: Edenlayer Protocol doesn't currently expose a /tasks list endpoint
+      // Tasks are executed and tracked individually by taskId
+      // For now, we'll use local storage to track user's task history
+      const storedTasks = localStorage.getItem('aetheraos-task-history');
+      if (storedTasks) {
+        setTasks(JSON.parse(storedTasks));
+      } else {
+        setTasks([]);
       }
-    ];
-    setTasks(mockTasks);
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+      setTasks([]);
+    }
   };
 
-  const handleTaskCreated = (newTask) => {
-    setTasks([newTask, ...tasks]);
-    setShowTaskForm(false);
+  const handleTaskCreated = async (taskData) => {
+    try {
+      // Add task to history with timestamp
+      const taskRecord = {
+        id: taskData.taskId,
+        taskId: taskData.taskId,
+        agentId: taskData.agentId,
+        operation: taskData.operation,
+        params: taskData.params,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+
+      const updatedTasks = [taskRecord, ...tasks];
+      setTasks(updatedTasks);
+
+      // Save to localStorage
+      localStorage.setItem('aetheraos-task-history', JSON.stringify(updatedTasks));
+
+      setShowTaskForm(false);
+
+      // Optionally poll for status updates
+      pollTaskStatus(taskData.taskId);
+    } catch (error) {
+      console.error('Failed to handle task creation:', error);
+    }
+  };
+
+  const pollTaskStatus = async (taskId) => {
+    try {
+      const { getTaskStatus } = await import('../lib/edenlayer');
+
+      // Poll for status updates (simple implementation)
+      const checkStatus = async () => {
+        try {
+          const status = await getTaskStatus(taskId);
+
+          setTasks(prev => prev.map(task =>
+            task.taskId === taskId
+              ? { ...task, status: status.state, result: status.result }
+              : task
+          ));
+
+          // Update localStorage
+          const updatedTasks = tasks.map(task =>
+            task.taskId === taskId
+              ? { ...task, status: status.state, result: status.result }
+              : task
+          );
+          localStorage.setItem('aetheraos-task-history', JSON.stringify(updatedTasks));
+
+          // Continue polling if not completed or failed
+          if (status.state === 'pending' || status.state === 'executing') {
+            setTimeout(checkStatus, 3000); // Poll every 3 seconds
+          }
+        } catch (error) {
+          console.error('Failed to poll task status:', error);
+        }
+      };
+
+      checkStatus();
+    } catch (error) {
+      console.error('Failed to setup polling:', error);
+    }
   };
 
   const filteredTasks = tasks.filter(task => {

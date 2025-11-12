@@ -30,78 +30,62 @@ export default function Dashboard() {
   }, [initTheme]);
 
   const loadDashboardData = async () => {
-    // TODO: Load real data from blockchain
-    // Mock data for development
-    const mockTasks = [
-      {
-        id: 'task-1',
-        title: 'Write blog post about NullShot MCP',
-        description: '500 words, SEO-optimized content about NullShot framework',
-        budget: '0.05',
-        deadline: Date.now() + 86400000,
-        status: 'OPEN',
-        requester: '0x1234...',
-        worker: null,
-        createdAt: Date.now() - 3600000
-      },
-      {
-        id: 'task-2',
-        title: 'Code review for smart contract',
-        description: 'Review escrow contract for security vulnerabilities',
-        budget: '0.08',
-        deadline: Date.now() + 172800000,
-        status: 'CLAIMED',
-        requester: '0x1234...',
-        worker: '0x5678...',
-        createdAt: Date.now() - 7200000
-      },
-      {
-        id: 'task-3',
-        title: 'Data analysis report',
-        description: 'Analyze market trends and create visualizations',
-        budget: '0.10',
-        deadline: Date.now() + 259200000,
-        status: 'COMPLETED',
-        requester: '0x1234...',
-        worker: '0x9abc...',
-        createdAt: Date.now() - 86400000
-      }
-    ];
+    try {
+      // Load user's agents from Edenlayer
+      const { discoverAgents } = await import('../lib/edenlayer');
+      const userAgents = await discoverAgents([]);
 
-    const mockAgents = [
-      {
-        id: 'agent-1',
-        name: 'My WorkerAgent',
-        description: 'Personal agent for task execution',
-        capabilities: ['coding', 'writing'],
-        endpoint: 'https://aetheraos.vercel.app/api/agents/worker',
-        pricing: { model: 'x402', amount: 0.01 },
-        owner: '0x1234...',
-        reputation: 95,
-        status: 'online',
-        tasksCompleted: 47
-      }
-    ];
+      // TODO: Filter to only user's own agents once we have ownership info
+      // For now showing all discovered agents
+      setAgents(userAgents.slice(0, 5)); // Limit to 5 for dashboard display
 
-    setTasks(mockTasks);
-    setAgents(mockAgents);
-    setStats({
-      totalTasks: mockTasks.length,
-      activeTasks: mockTasks.filter(t => t.status === 'CLAIMED' || t.status === 'OPEN').length,
-      completedTasks: mockTasks.filter(t => t.status === 'COMPLETED').length,
-      totalEarnings: 0.23
-    });
+      // TODO: Load user's tasks from Edenlayer task API
+      // For now using placeholder until task API is ready
+      const userTasks = [];
+
+      setTasks(userTasks);
+      setStats({
+        totalTasks: userTasks.length,
+        activeTasks: userTasks.filter(t => t.state === 'pending' || t.state === 'running').length,
+        completedTasks: userTasks.filter(t => t.state === 'completed').length,
+        totalEarnings: 0.00 // TODO: Calculate from completed tasks
+      });
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+      // Show empty state on error
+      setAgents([]);
+      setTasks([]);
+      setStats({
+        totalTasks: 0,
+        activeTasks: 0,
+        completedTasks: 0,
+        totalEarnings: 0
+      });
+    }
   };
 
-  const handleTaskCreated = (taskId) => {
-    console.log('Task created:', taskId);
-    setShowTaskForm(false);
-    loadDashboardData();
+  const handleTaskCreated = async (taskData) => {
+    try {
+      const { executeTask } = await import('../lib/edenlayer');
+      const result = await executeTask(taskData.agentId, taskData.operation, taskData.params);
+      console.log('Task created:', result.taskId);
+      setShowTaskForm(false);
+      loadDashboardData();
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      alert('Failed to create task. Please try again.');
+    }
   };
 
-  const handleTaskClaim = (taskId) => {
-    console.log('Claiming task:', taskId);
-    // TODO: Implement task claiming
+  const handleTaskClaim = async (taskId) => {
+    try {
+      // TODO: Implement task claiming API endpoint when available
+      console.log('Claiming task:', taskId);
+      alert('Task claiming will be implemented once the API endpoint is available');
+    } catch (error) {
+      console.error('Failed to claim task:', error);
+      alert('Failed to claim task. Please try again.');
+    }
   };
 
   return (

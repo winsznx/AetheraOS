@@ -44,23 +44,35 @@ export default function Deploy() {
   const handleDeploy = async () => {
     setLoading(true);
     try {
-      // Register agent in Edenlayer
+      // Register agent in Edenlayer with proper MCP schema
       const agentId = await registerAgent({
         name: agentConfig.name,
         description: agentConfig.description,
-        capabilities: agentConfig.capabilities,
-        endpoint: agentConfig.endpoint,
-        pricing: {
-          model: agentConfig.pricingModel,
-          amount: parseFloat(agentConfig.priceAmount)
-        }
+        defaultPrompt: `How can ${agentConfig.name} help you today?`,
+        mcpUrl: agentConfig.endpoint,
+        capabilities: {
+          tools: agentConfig.capabilities.map(cap => ({
+            name: cap,
+            description: `Capability: ${cap}`,
+            inputSchema: {
+              type: "object",
+              properties: {},
+              required: []
+            }
+          }))
+        },
+        // Optional fields
+        imageUrl: '',
+        backgroundImageUrl: '',
+        websiteUrl: '',
+        chatUrl: ''
       });
 
-      console.log('Agent deployed:', agentId);
+      console.log('Agent deployed successfully:', agentId);
       setStep(4);
     } catch (error) {
       console.error('Deployment failed:', error);
-      alert('Failed to deploy agent. Please try again.');
+      alert(`Failed to deploy agent: ${error.message}`);
     } finally {
       setLoading(false);
     }
