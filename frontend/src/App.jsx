@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Deploy from './pages/Deploy';
 import Marketplace from './pages/Marketplace';
 import Tasks from './pages/Tasks';
+import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import useThemeStore from './store/theme';
@@ -57,6 +58,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Tasks />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat"
+              element={
+                <ProtectedRoute>
+                  <Chat />
                 </ProtectedRoute>
               }
             />

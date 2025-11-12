@@ -4,8 +4,9 @@ import { useDisconnect } from 'wagmi';
 import {
   LayoutDashboard,
   Upload,
-  ShoppingBag,
+  Store,
   FileText,
+  MessageCircle,
   Settings,
   Menu,
   X,
@@ -45,7 +46,7 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
     },
     {
       path: '/marketplace',
-      icon: <ShoppingBag className="w-5 h-5" />,
+      icon: <Store className="w-5 h-5" />,
       label: 'Marketplace',
       description: 'Discover agents'
     },
@@ -54,6 +55,12 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
       icon: <FileText className="w-5 h-5" />,
       label: 'Tasks',
       description: 'Manage tasks'
+    },
+    {
+      path: '/chat',
+      icon: <MessageCircle className="w-5 h-5" />,
+      label: 'Chat',
+      description: 'Chat with agents'
     },
     {
       path: '/settings',
