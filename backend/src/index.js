@@ -3,6 +3,21 @@
  * Express + PostgreSQL + Prisma
  */
 
+console.log('============================================');
+console.log('🔧 Loading AetheraOS Backend...');
+console.log('============================================');
+
+// Catch all unhandled errors
+process.on('uncaughtException', (error) => {
+  console.error('💥 UNCAUGHT EXCEPTION:', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 UNHANDLED REJECTION at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -10,6 +25,8 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+
+console.log('✅ Core modules imported');
 
 // Import routes
 import userRoutes from './routes/users.js';
@@ -19,11 +36,16 @@ import chatRoutes from './routes/chat.js';
 import ipfsRoutes from './routes/ipfs.js';
 import analyticsRoutes from './routes/analytics.js';
 
+console.log('✅ All routes imported');
+
 dotenv.config();
+console.log('✅ Environment configured');
 
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
+
+console.log(`✅ Express app created, PORT=${PORT}`);
 
 // Middleware
 app.use(helmet()); // Security headers
@@ -42,6 +64,8 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api/', limiter);
+
+console.log('✅ Middleware configured');
 
 // Health check
 app.get('/health', (req, res) => {
@@ -72,12 +96,14 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
+console.log('⚙️  Registering API routes...');
 app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/ipfs', ipfsRoutes);
 app.use('/api/analytics', analyticsRoutes);
+console.log('✅ All routes registered');
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -115,10 +141,25 @@ process.on('SIGINT', async () => {
 });
 
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 AetheraOS Backend API running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
-});
+console.log(`🚀 Attempting to start server on port ${PORT}...`);
+
+try {
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log('============================================');
+    console.log(`✅ AetheraOS Backend API running on port ${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+    console.log(`🌐 Listening on http://0.0.0.0:${PORT}`);
+    console.log('============================================');
+  });
+
+  server.on('error', (error) => {
+    console.error('💥 SERVER ERROR:', error);
+    process.exit(1);
+  });
+} catch (error) {
+  console.error('💥 FAILED TO START SERVER:', error);
+  process.exit(1);
+}
 
 export { prisma };
