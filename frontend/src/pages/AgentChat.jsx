@@ -6,7 +6,7 @@ import Button from '../components/Button';
 import useThemeStore from '../store/theme';
 import { cn } from '../utils/cn';
 
-const AGENT_URL = import.meta.env.VITE_AGENT_URL || 'http://localhost:8787';
+const AGENT_URL = import.meta.env.VITE_AGENT_URL || 'https://aetheraos-autonomous-agent.timjosh507.workers.dev';
 
 /**
  * Agent Chat Page

@@ -11,7 +11,7 @@ import { baseSepolia, base } from 'thirdweb/chains';
 // Environment Configuration
 const THIRDWEB_CLIENT_ID = import.meta.env.VITE_THIRDWEB_CLIENT_ID || '';
 const NETWORK = import.meta.env.VITE_NETWORK || 'testnet';
-const CHAININTEL_MCP_URL = import.meta.env.VITE_CHAININTEL_MCP_URL || 'http://localhost:8787';
+const CHAININTEL_MCP_URL = import.meta.env.VITE_CHAININTEL_MCP_URL || 'https://chainintel-mcp.timjosh507.workers.dev';
 
 // Select chain based on network
 export const ACTIVE_CHAIN = NETWORK === 'mainnet' ? base : baseSepolia;
