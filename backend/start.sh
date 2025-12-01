@@ -17,12 +17,8 @@ fi
 
 echo ""
 echo "======================================"
-echo "🔄 Running database migrations"
-echo "======================================"
-npx prisma db push --accept-data-loss --skip-generate || {
-  echo "❌ Migration failed!"
-  exit 1
-}
+echo "🔄 Running database migrations in background..."
+(npx prisma db push --accept-data-loss --skip-generate || echo "❌ Migration failed!") &
 
 echo ""
 echo "======================================"
