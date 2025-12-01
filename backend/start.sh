@@ -1,17 +1,31 @@
 #!/bin/sh
-set -e
+set -ex
 
-echo "📋 Environment Check..."
-echo "NODE_ENV: ${NODE_ENV}"
-echo "DATABASE_URL: ${DATABASE_URL:0:30}..." # Show first 30 chars only
+echo "======================================"
+echo "📋 Environment Check"
+echo "======================================"
+echo "NODE_ENV: ${NODE_ENV:-not set}"
+echo "DATABASE_URL: ${DATABASE_URL:0:40}..."
+echo "FRONTEND_URL: ${FRONTEND_URL}"
+echo "JWT_SECRET: ${JWT_SECRET:0:10}..."
+echo "======================================"
 
 if [ -z "$DATABASE_URL" ]; then
   echo "❌ ERROR: DATABASE_URL is not set!"
   exit 1
 fi
 
-echo "🔄 Running database migrations..."
-npx prisma db push --accept-data-loss --skip-generate
+echo ""
+echo "======================================"
+echo "🔄 Running database migrations"
+echo "======================================"
+npx prisma db push --accept-data-loss --skip-generate || {
+  echo "❌ Migration failed!"
+  exit 1
+}
 
-echo "🚀 Starting AetheraOS Backend..."
-node src/index.js
+echo ""
+echo "======================================"
+echo "🚀 Starting AetheraOS Backend"
+echo "======================================"
+exec node src/index.js
