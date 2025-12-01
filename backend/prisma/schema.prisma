@@ -1,0 +1,243 @@
+// Prisma Schema for AetheraOS
+// Database: PostgreSQL (Railway)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Profile
+model User {
+  id        String   @id @default(cuid())
+  address   String   @unique // Wallet address (lowercase)
+  displayName String?
+  email     String?
+  bio       String?
+  avatar    String?
+
+  // Preferences
+  theme     String   @default("dark")
+  notifications Boolean @default(true)
+  emailNotifications Boolean @default(false)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+
+  // Relations
+  tasks     Task[]
+  agents    Agent[]
+  chatMessages ChatMessage[]
+
+  @@index([address])
+}
+
+// Task (syncs with blockchain)
+model Task {
+  id          String   @id @default(cuid())
+  taskId      String?  @unique // Blockchain task ID
+
+  // Task details
+  title       String
+  description String
+  budget      String   // ETH amount
+  deadline    DateTime?
+
+  // Status
+  status      String   @default("OPEN") // OPEN, CLAIMED, SUBMITTED, VERIFIED, COMPLETED, DISPUTED
+
+  // Blockchain data
+  requester   String   // Wallet address
+  worker      String?  // Wallet address
+  proofHash   String?  // IPFS hash
+  txHash      String?  // Transaction hash
+
+  // Metadata
+  agentId     String?
+  operation   String?
+  params      Json?
+  result      Json?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  claimedAt   DateTime?
+  submittedAt DateTime?
+  completedAt DateTime?
+
+  // Relations
+  user        User     @relation(fields: [requester], references: [address])
+
+  @@index([requester])
+  @@index([worker])
+  @@index([status])
+  @@index([taskId])
+}
+
+// Agent (registered on Edenlayer)
+model Agent {
+  id          String   @id @default(cuid())
+  agentId     String?  @unique // Edenlayer agent ID
+
+  // Agent details
+  name        String
+  description String
+  endpoint    String   // MCP URL
+  imageUrl    String?
+
+  // Configuration
+  capabilities String[] // Array of capabilities
+  pricingModel String   @default("x402") // x402, flat
+  priceAmount  String?  // Price in ETH
+
+  // Status
+  status      String   @default("active") // active, inactive, suspended
+
+  // Ownership
+  owner       String   // Wallet address
+
+  // Stats
+  totalCalls  Int      @default(0)
+  totalRevenue String  @default("0")
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastUsed    DateTime?
+
+  // Relations
+  user        User     @relation(fields: [owner], references: [address])
+
+  @@index([owner])
+  @@index([status])
+  @@index([agentId])
+}
+
+// Chat Room
+model ChatRoom {
+  id          String   @id @default(cuid())
+  roomId      String?  @unique // Edenlayer room ID
+
+  // Room details
+  name        String
+  description String?
+  type        String   @default("CHAT") // CHAT, AGENT, TASK
+
+  // Settings
+  private     Boolean  @default(false)
+  maxParticipants Int?
+
+  // Metadata
+  participants String[] // Array of wallet addresses
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastMessage DateTime?
+
+  // Relations
+  messages    ChatMessage[]
+
+  @@index([roomId])
+}
+
+// Chat Message
+model ChatMessage {
+  id          String   @id @default(cuid())
+
+  // Message data
+  content     String
+  sender      String   // Wallet address
+
+  // Metadata
+  messageType String   @default("text") // text, system, file
+  metadata    Json?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+
+  // Relations
+  room        ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId      String
+  user        User     @relation(fields: [sender], references: [address])
+
+  @@index([roomId])
+  @@index([sender])
+  @@index([createdAt])
+}
+
+// IPFS Upload
+model IPFSUpload {
+  id          String   @id @default(cuid())
+
+  // IPFS data
+  cid         String   @unique // Content ID
+  filename    String
+  filesize    Int      // Bytes
+  mimetype    String?
+
+  // Upload metadata
+  uploader    String   // Wallet address
+  purpose     String?  // work_proof, agent_metadata, etc.
+
+  // Related entities
+  taskId      String?
+  agentId     String?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  pinnedUntil DateTime? // Pinata expiry
+
+  @@index([uploader])
+  @@index([cid])
+  @@index([taskId])
+}
+
+// Analytics Event
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+
+  // Event data
+  eventType   String   // task_created, agent_deployed, tool_called, etc.
+  userAddress String?
+
+  // Event metadata
+  data        Json?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+
+  @@index([eventType])
+  @@index([userAddress])
+  @@index([createdAt])
+}
+
+// Webhook Subscription
+model WebhookSubscription {
+  id          String   @id @default(cuid())
+
+  // Subscription details
+  url         String
+  events      String[] // Array of event types to listen for
+  secret      String   // HMAC secret for verification
+
+  // Owner
+  owner       String   // Wallet address
+
+  // Status
+  active      Boolean  @default(true)
+  lastTriggered DateTime?
+  failureCount Int      @default(0)
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([owner])
+  @@index([active])
+}
