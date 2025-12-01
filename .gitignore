@@ -89,7 +89,6 @@ tmp/
 .stylelintcache
 
 # Package managers
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
