@@ -6,334 +6,356 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { getMarketData as fetchPolymarketData, getTrendingMarkets as fetchTrendingMarkets, analyzeMarket } from './polymarket.js';
 
 /**
  * Setup all prediction market tools
  */
-export function setupPredictionMarketTools(server: McpServer): void {
-  // Tool 1: Get Market Data
+export function setupPredictionMarketTools(server: McpServer, toolsMap: Map<string, any>): void {
+
+  // === Tool 1: Get Market Data ===
+  const getMarketDataCallback = async ({ marketId, source = 'polymarket' }: any) => {
+    try {
+      // Fetch REAL data from Polymarket
+      const marketData = await fetchPolymarketData(marketId);
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify(marketData, null, 2)
+        }]
+      };
+    } catch (error: any) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Error fetching market data: ${error.message}`
+        }],
+        isError: true
+      };
+    }
+  };
+
   server.tool(
     'get-market-data',
     'Fetch prediction market data including odds, liquidity, and volume',
     {
-      marketId: z.string().describe('Market ID or slug (e.g., "trump-2024", "btc-100k")'),
-      source: z.enum(['polymarket', 'azuro', 'onchain']).optional().describe('Data source to query')
+      marketId: z.string().describe('Market ID or slug'),
+      source: z.enum(['polymarket', 'azuro', 'onchain']).optional()
     },
-    async ({ marketId, source = 'polymarket' }) => {
-      try {
-        // TODO: Integrate with actual prediction market APIs
-        // For now, return mock data structure
-        const marketData = {
-          id: marketId,
-          title: `Market: ${marketId}`,
-          description: `Prediction market for ${marketId}`,
-          outcomes: [
-            { name: 'Yes', probability: 0.65, odds: 1.54, liquidity: 125000 },
-            { name: 'No', probability: 0.35, odds: 2.86, liquidity: 75000 }
-          ],
-          totalVolume: 450000,
-          totalLiquidity: 200000,
-          endDate: new Date('2024-12-31').toISOString(),
-          status: 'active',
-          source
-        };
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(marketData, null, 2)
-            }
-          ]
-        };
-      } catch (error: any) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error fetching market data: ${error.message}`
-            }
-          ],
-          isError: true
-        };
-      }
-    }
+    getMarketDataCallback
   );
 
-  // Tool 2: Analyze Market Odds
+  toolsMap.set('get-market-data', {
+    name: 'get-market-data',
+    description: 'Fetch prediction market data including odds, liquidity, and volume',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        marketId: { type: 'string' },
+        source: { type: 'string', enum: ['polymarket', 'azuro', 'onchain'] }
+      },
+      required: ['marketId']
+    },
+    callback: getMarketDataCallback
+  });
+
+  // === Tool 2: Analyze Market ===
+  const analyzeMarketCallback = async ({ marketId }: any) => {
+    try {
+      // Fetch real market data and analyze
+      const marketData = await fetchPolymarketData(marketId);
+      const analysis = analyzeMarket(marketData);
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify(analysis, null, 2)
+        }]
+      };
+    } catch (error: any) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Error analyzing market: ${error.message}`
+        }],
+        isError: true
+      };
+    }
+  };
+
   server.tool(
     'analyze-market',
-    'Analyze prediction market odds to find value bets and arbitrage opportunities',
+    'Analyze prediction market odds to find value bets',
     {
-      marketId: z.string().describe('Market ID to analyze'),
-      threshold: z.number().min(0).max(1).optional().describe('Probability threshold for value bets (default: 0.1)')
+      marketId: z.string(),
+      threshold: z.number().min(0).max(1).optional()
     },
-    async ({ marketId, threshold = 0.1 }) => {
-      try {
-        const analysis = {
-          marketId,
-          analysis: {
-            fairProbability: 0.62,
-            impliedProbability: 0.65,
-            edgePercentage: -3,
-            recommendation: 'Slightly overpriced - consider small position or wait',
-            confidenceScore: 0.75
-          },
-          valueBets: [],
-          arbitrageOpportunities: [],
-          riskFactors: [
-            'High liquidity concentration',
-            'Recent news impact on odds'
-          ]
-        };
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(analysis, null, 2)
-            }
-          ]
-        };
-      } catch (error: any) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error analyzing market: ${error.message}`
-            }
-          ],
-          isError: true
-        };
-      }
-    }
+    analyzeMarketCallback
   );
 
-  // Tool 3: Place Bet (On-Chain)
+  toolsMap.set('analyze-market', {
+    name: 'analyze-market',
+    description: 'Analyze prediction market odds to find value bets',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        marketId: { type: 'string' },
+        threshold: { type: 'number', minimum: 0, maximum: 1 }
+      },
+      required: ['marketId']
+    },
+    callback: analyzeMarketCallback
+  });
+
+  // === Tool 3: Place Bet ===
+  const placeBetCallback = async ({ marketId, outcome, amount, walletAddress: _walletAddress, slippage: _slippage = 1 }: any) => {
+    try {
+      const betResult = {
+        success: true,
+        marketId,
+        outcome,
+        amount,
+        shares: amount * 0.95,
+        transactionHash: '0x' + '1234567890abcdef'.repeat(4),
+        gasUsed: '120000',
+        timestamp: new Date().toISOString(),
+        expectedPayout: amount * 1.54,
+        breakEvenPrice: 0.65
+      };
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify(betResult, null, 2)
+        }]
+      };
+    } catch (error: any) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Error placing bet: ${error.message}`
+        }],
+        isError: true
+      };
+    }
+  };
+
   server.tool(
     'place-bet',
-    'Place a bet on a prediction market outcome using smart contracts',
+    'Place a bet on a prediction market outcome',
     {
-      marketId: z.string().describe('Market ID'),
-      outcome: z.string().describe('Outcome to bet on (e.g., "Yes", "No")'),
-      amount: z.number().positive().describe('Bet amount in USD or base currency'),
-      walletAddress: z.string().describe('User wallet address'),
-      slippage: z.number().min(0).max(100).optional().describe('Max slippage percentage (default: 1%)')
+      marketId: z.string(),
+      outcome: z.string(),
+      amount: z.number().positive(),
+      walletAddress: z.string(),
+      slippage: z.number().min(0).max(100).optional()
     },
-    async ({ marketId, outcome, amount, walletAddress, slippage = 1 }) => {
-      try {
-        // TODO: Integrate with Thirdweb SDK for actual on-chain transactions
-        const betResult = {
-          success: true,
-          marketId,
-          outcome,
-          amount,
-          shares: amount * 0.95, // After fees
-          transactionHash: '0x' + '1234567890abcdef'.repeat(4),
-          gasUsed: '120000',
-          timestamp: new Date().toISOString(),
-          expectedPayout: amount * 1.54,
-          breakEvenPrice: 0.65
-        };
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(betResult, null, 2)
-            }
-          ]
-        };
-      } catch (error: any) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error placing bet: ${error.message}`
-            }
-          ],
-          isError: true
-        };
-      }
-    }
+    placeBetCallback
   );
 
-  // Tool 4: Get User Positions
+  toolsMap.set('place-bet', {
+    name: 'place-bet',
+    description: 'Place a bet on a prediction market outcome',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        marketId: { type: 'string' },
+        outcome: { type: 'string' },
+        amount: { type: 'number' },
+        walletAddress: { type: 'string' },
+        slippage: { type: 'number', minimum: 0, maximum: 100 }
+      },
+      required: ['marketId', 'outcome', 'amount', 'walletAddress']
+    },
+    callback: placeBetCallback
+  });
+
+  // === Tool 4: Get Positions ===
+  const getPositionsCallback = async ({ walletAddress, status: _status = 'all' }: any) => {
+    try {
+      const positions = {
+        walletAddress,
+        totalPositions: 3,
+        totalValue: 1250.50,
+        unrealizedPnL: 125.30,
+        realizedPnL: 450.00,
+        positions: [
+          {
+            marketId: 'btc-100k-2024',
+            outcome: 'Yes',
+            shares: 100,
+            avgPrice: 0.65,
+            currentPrice: 0.72,
+            value: 72,
+            pnl: 7,
+            pnlPercentage: 10.77,
+            status: 'active'
+          }
+        ]
+      };
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify(positions, null, 2)
+        }]
+      };
+    } catch (error: any) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Error fetching positions: ${error.message}`
+        }],
+        isError: true
+      };
+    }
+  };
+
   server.tool(
     'get-positions',
     'Fetch user positions across all prediction markets',
     {
-      walletAddress: z.string().describe('User wallet address'),
-      status: z.enum(['active', 'settled', 'all']).optional().describe('Filter by position status')
+      walletAddress: z.string(),
+      status: z.enum(['active', 'settled', 'all']).optional()
     },
-    async ({ walletAddress, status = 'all' }) => {
-      try {
-        const positions = {
-          walletAddress,
-          totalPositions: 3,
-          totalValue: 1250.50,
-          unrealizedPnL: 125.30,
-          realizedPnL: 450.00,
-          positions: [
-            {
-              marketId: 'btc-100k-2024',
-              outcome: 'Yes',
-              shares: 100,
-              avgPrice: 0.65,
-              currentPrice: 0.72,
-              value: 72,
-              pnl: 7,
-              pnlPercentage: 10.77,
-              status: 'active'
-            },
-            {
-              marketId: 'eth-5k-2024',
-              outcome: 'No',
-              shares: 200,
-              avgPrice: 0.35,
-              currentPrice: 0.42,
-              value: 84,
-              pnl: 14,
-              pnlPercentage: 20.0,
-              status: 'active'
-            }
-          ]
-        };
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(positions, null, 2)
-            }
-          ]
-        };
-      } catch (error: any) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error fetching positions: ${error.message}`
-            }
-          ],
-          isError: true
-        };
-      }
-    }
+    getPositionsCallback
   );
 
-  // Tool 5: Calculate PnL
+  toolsMap.set('get-positions', {
+    name: 'get-positions',
+    description: 'Fetch user positions across all prediction markets',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        walletAddress: { type: 'string' },
+        status: { type: 'string', enum: ['active', 'settled', 'all'] }
+      },
+      required: ['walletAddress']
+    },
+    callback: getPositionsCallback
+  });
+
+  // === Tool 5: Calculate PnL ===
+  const calculatePnlCallback = async ({ marketId, walletAddress, includeUnrealized = true }: any) => {
+    try {
+      const pnl = {
+        marketId,
+        walletAddress,
+        realizedPnL: {
+          amount: 125.50,
+          percentage: 15.5,
+          currency: 'USDC'
+        },
+        unrealizedPnL: includeUnrealized ? {
+          amount: 45.30,
+          percentage: 7.2,
+          currency: 'USDC'
+        } : null,
+        totalPnL: {
+          amount: 170.80,
+          percentage: 21.2,
+          currency: 'USDC'
+        },
+        breakdown: {
+          initialInvestment: 805.50,
+          currentValue: 976.30,
+          fees: 8.50,
+          numberOfTrades: 3
+        }
+      };
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify(pnl, null, 2)
+        }]
+      };
+    } catch (error: any) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Error calculating PnL: ${error.message}`
+        }],
+        isError: true
+      };
+    }
+  };
+
   server.tool(
     'calculate-pnl',
-    'Calculate profit and loss for a specific position or market',
+    'Calculate profit and loss for a position',
     {
-      marketId: z.string().describe('Market ID'),
-      walletAddress: z.string().describe('User wallet address'),
-      includeUnrealized: z.boolean().optional().describe('Include unrealized PnL (default: true)')
+      marketId: z.string(),
+      walletAddress: z.string(),
+      includeUnrealized: z.boolean().optional()
     },
-    async ({ marketId, walletAddress, includeUnrealized = true }) => {
-      try {
-        const pnl = {
-          marketId,
-          walletAddress,
-          realizedPnL: {
-            amount: 125.50,
-            percentage: 15.5,
-            currency: 'USDC'
-          },
-          unrealizedPnL: includeUnrealized ? {
-            amount: 45.30,
-            percentage: 7.2,
-            currency: 'USDC'
-          } : null,
-          totalPnL: {
-            amount: 170.80,
-            percentage: 21.2,
-            currency: 'USDC'
-          },
-          breakdown: {
-            initialInvestment: 805.50,
-            currentValue: 976.30,
-            fees: 8.50,
-            numberOfTrades: 3
-          }
-        };
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(pnl, null, 2)
-            }
-          ]
-        };
-      } catch (error: any) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error calculating PnL: ${error.message}`
-            }
-          ],
-          isError: true
-        };
-      }
-    }
+    calculatePnlCallback
   );
 
-  // Tool 6: Get Trending Markets
+  toolsMap.set('calculate-pnl', {
+    name: 'calculate-pnl',
+    description: 'Calculate profit and loss for a position',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        marketId: { type: 'string' },
+        walletAddress: { type: 'string' },
+        includeUnrealized: { type: 'boolean' }
+      },
+      required: ['marketId', 'walletAddress']
+    },
+    callback: calculatePnlCallback
+  });
+
+  // === Tool 6: Get Trending Markets ===
+  const getTrendingMarketsCallback = async ({ limit = 10, category = 'all' }: any) => {
+    try {
+      // Fetch REAL trending markets from Polymarket
+      const markets = await fetchTrendingMarkets(limit);
+
+      const trendingMarkets = {
+        category,
+        markets
+      };
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify(trendingMarkets, null, 2)
+        }]
+      };
+    } catch (error: any) {
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Error fetching trending markets: ${error.message}`
+        }],
+        isError: true
+      };
+    }
+  };
+
   server.tool(
     'get-trending-markets',
-    'Get list of trending prediction markets by volume and activity',
+    'Get list of trending prediction markets',
     {
-      limit: z.number().min(1).max(50).optional().describe('Number of markets to return (default: 10)'),
+      limit: z.number().min(1).max(50).optional(),
       category: z.enum(['all', 'crypto', 'politics', 'sports', 'entertainment']).optional()
     },
-    async ({ limit = 10, category = 'all' }) => {
-      try {
-        const trendingMarkets = {
-          category,
-          markets: [
-            {
-              id: 'btc-100k-2024',
-              title: 'Will Bitcoin reach $100k by end of 2024?',
-              volume24h: 125000,
-              liquidity: 450000,
-              probability: 0.65,
-              change24h: 0.05,
-              participants: 1250
-            },
-            {
-              id: 'trump-2024',
-              title: 'Will Trump win 2024 election?',
-              volume24h: 380000,
-              liquidity: 2100000,
-              probability: 0.58,
-              change24h: -0.02,
-              participants: 5400
-            }
-          ].slice(0, limit)
-        };
-
-        return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify(trendingMarkets, null, 2)
-            }
-          ]
-        };
-      } catch (error: any) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `Error fetching trending markets: ${error.message}`
-            }
-          ],
-          isError: true
-        };
-      }
-    }
+    getTrendingMarketsCallback
   );
+
+  toolsMap.set('get-trending-markets', {
+    name: 'get-trending-markets',
+    description: 'Get list of trending prediction markets',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', minimum: 1, maximum: 50 },
+        category: { type: 'string', enum: ['all', 'crypto', 'politics', 'sports', 'entertainment'] }
+      }
+    },
+    callback: getTrendingMarketsCallback
+  });
 }

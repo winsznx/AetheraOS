@@ -8,10 +8,12 @@
  * - Track positions and calculate PnL
  */
 
+import { Env } from './types.js';
+
 export { PredictionMarketMcpServer } from './server.js';
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
     // Health check endpoint
@@ -34,11 +36,8 @@ export default {
 
     console.log(`Routing to MCP server with sessionId: ${id}`);
 
-    url.searchParams.set('sessionId', id.toString());
-
-    return env.MCP_SERVER.get(id).fetch(new Request(
-      url.toString(),
-      request
-    ));
+    // Forward request to Durable Object
+    const stub = env.MCP_SERVER.get(id);
+    return stub.fetch(request);
   }
 };
