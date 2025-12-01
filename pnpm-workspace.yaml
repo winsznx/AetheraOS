@@ -1,0 +1,4 @@
+packages:
+  - 'mcps/*'
+  - 'packages/*'
+  - 'agents/*'
