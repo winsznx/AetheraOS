@@ -1,0 +1,36 @@
+{
+  "name": "aetheraos-backend",
+  "version": "1.0.0",
+  "description": "AetheraOS Backend API with PostgreSQL",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev"
+  },
+  "keywords": ["blockchain", "ai", "api"],
+  "author": "AetheraOS",
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "express": "^4.21.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.4",
+    "jsonwebtoken": "^9.0.2",
+    "helmet": "^8.0.0",
+    "express-rate-limit": "^7.4.1",
+    "compression": "^1.7.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7",
+    "prisma": "^5.22.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
