@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Cpu,
-  LogOut
+  LogOut,
+  Brain
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
@@ -61,6 +62,12 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
       icon: <MessageCircle className="w-5 h-5" />,
       label: 'Chat',
       description: 'Chat with agents'
+    },
+    {
+      path: '/agent',
+      icon: <Brain className="w-5 h-5" />,
+      label: 'AI Agent',
+      description: 'Blockchain Intelligence'
     },
     {
       path: '/settings',

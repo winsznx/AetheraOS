@@ -6,6 +6,7 @@ import Deploy from './pages/Deploy';
 import Marketplace from './pages/Marketplace';
 import Tasks from './pages/Tasks';
 import Chat from './pages/Chat';
+import AgentChat from './pages/AgentChat';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import useThemeStore from './store/theme';
@@ -66,6 +67,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <Chat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/agent"
+              element={
+                <ProtectedRoute>
+                  <AgentChat />
                 </ProtectedRoute>
               }
             />
