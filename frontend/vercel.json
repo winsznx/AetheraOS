@@ -39,8 +39,6 @@
     }
   ],
   "env": {
-    "VITE_REOWN_PROJECT_ID": "@reown_project_id",
-    "VITE_THIRDWEB_CLIENT_ID": "@thirdweb_client_id",
     "VITE_ACTIVE_CHAIN": "base-sepolia",
     "VITE_NETWORK": "testnet",
     "VITE_CHAININTEL_MCP_URL": "https://chainintel-mcp.timjosh507.workers.dev",
