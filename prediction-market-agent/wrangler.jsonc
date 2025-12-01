@@ -6,15 +6,14 @@
     "bindings": [
       {
         "name": "MCP_SERVER",
-        "class_name": "PredictionMarketMcpServer",
-        "script_name": "prediction-market-agent"
+        "class_name": "PredictionMarketMcpServer"
       }
     ]
   },
-  "[[migrations]]": [
+  "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["PredictionMarketMcpServer"]
+      "new_sqlite_classes": ["PredictionMarketMcpServer"]
     }
   ]
 }
