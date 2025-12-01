@@ -1,0 +1,36 @@
+{
+  "name": "chainintel-mcp",
+  "version": "1.0.0",
+  "description": "Cross-chain wallet intelligence with AI-powered analysis (Base + Solana)",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "npx wrangler deploy --dry-run --outdir=dist",
+    "build:check": "tsc --noEmit",
+    "deploy": "npx wrangler deploy",
+    "test": "vitest"
+  },
+  "keywords": ["mcp", "blockchain", "ai", "wallet-analysis", "cross-chain"],
+  "author": "AetheraOS",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.1",
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@solana/web3.js": "^1.95.8",
+    "moralis": "^2.27.2",
+    "helius-sdk": "^1.4.4",
+    "alchemy-sdk": "^3.4.2",
+    "thirdweb": "^5.72.0",
+    "viem": "^2.21.50",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.5",
+    "wrangler": "^3.114.15"
+  }
+}

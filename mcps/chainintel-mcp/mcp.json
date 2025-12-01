@@ -1,0 +1,169 @@
+{
+  "name": "chainintel-mcp",
+  "version": "2.0.0",
+  "description": "All-in-one AI-powered platform: Wallet intelligence, task escrow, IPFS storage, and prediction markets",
+  "transport": {
+    "type": "http",
+    "url": "https://chainintel-mcp.timjosh507.workers.dev"
+  },
+  "mcpServers": {
+    "chainintel": {
+      "command": "node",
+      "args": ["dist/index.js"],
+      "url": "https://chainintel-mcp.timjosh507.workers.dev",
+      "env": {
+        "MORALIS_API_KEY": "${MORALIS_API_KEY}",
+        "HELIUS_API_KEY": "${HELIUS_API_KEY}",
+        "ALCHEMY_API_KEY": "${ALCHEMY_API_KEY}",
+        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
+        "THIRDWEB_SECRET_KEY": "${THIRDWEB_SECRET_KEY}",
+        "PLATFORM_WALLET": "${PLATFORM_WALLET}",
+        "PINATA_API_KEY": "${PINATA_API_KEY}",
+        "PINATA_SECRET_KEY": "${PINATA_SECRET_KEY}",
+        "PINATA_JWT": "${PINATA_JWT}"
+      },
+      "timeout": 60000
+    }
+  },
+  "tools": [
+    {
+      "name": "analyze-wallet",
+      "description": "Deep cross-chain wallet analysis with AI insights",
+      "category": "Wallet Intelligence",
+      "price": "0.01",
+      "currency": "ETH"
+    },
+    {
+      "name": "detect-whales",
+      "description": "Identify whale wallets and track their movements",
+      "category": "Wallet Intelligence",
+      "price": "0.005",
+      "currency": "ETH"
+    },
+    {
+      "name": "smart-money-tracker",
+      "description": "Track smart money wallets with proven alpha",
+      "category": "Wallet Intelligence",
+      "price": "0.02",
+      "currency": "ETH"
+    },
+    {
+      "name": "risk-score",
+      "description": "Calculate comprehensive risk score for wallet",
+      "category": "Wallet Intelligence",
+      "price": "0.005",
+      "currency": "ETH"
+    },
+    {
+      "name": "trading-patterns",
+      "description": "Analyze trading patterns and identify strategies",
+      "category": "Wallet Intelligence",
+      "price": "0.01",
+      "currency": "ETH"
+    },
+    {
+      "name": "create_task",
+      "description": "Create blockchain task with escrowed ETH payment",
+      "category": "Task Escrow",
+      "price": "0.005",
+      "currency": "ETH"
+    },
+    {
+      "name": "claim_task",
+      "description": "Claim an available task to start working",
+      "category": "Task Escrow",
+      "price": "0.002",
+      "currency": "ETH"
+    },
+    {
+      "name": "submit_work",
+      "description": "Submit work proof (IPFS hash) for task",
+      "category": "Task Escrow",
+      "price": "0.002",
+      "currency": "ETH"
+    },
+    {
+      "name": "verify_work",
+      "description": "Verify work and release escrowed payment",
+      "category": "Task Escrow",
+      "price": "0.003",
+      "currency": "ETH"
+    },
+    {
+      "name": "get_task",
+      "description": "Get task details from blockchain",
+      "category": "Task Escrow",
+      "price": "0.001",
+      "currency": "ETH"
+    },
+    {
+      "name": "upload_work_proof",
+      "description": "Upload work proof file to IPFS with metadata",
+      "category": "IPFS Storage",
+      "price": "0.003",
+      "currency": "ETH"
+    },
+    {
+      "name": "upload_json",
+      "description": "Upload JSON data to IPFS",
+      "category": "IPFS Storage",
+      "price": "0.002",
+      "currency": "ETH"
+    },
+    {
+      "name": "download_proof",
+      "description": "Download and verify work proof from IPFS",
+      "category": "IPFS Storage",
+      "price": "0.001",
+      "currency": "ETH"
+    },
+    {
+      "name": "pin_to_ipfs",
+      "description": "Pin existing IPFS hash for persistence",
+      "category": "IPFS Storage",
+      "price": "0.002",
+      "currency": "ETH"
+    },
+    {
+      "name": "get_ipfs_url",
+      "description": "Get gateway URL for IPFS hash",
+      "category": "IPFS Storage",
+      "price": "0.0005",
+      "currency": "ETH"
+    },
+    {
+      "name": "get_market_data",
+      "description": "Fetch prediction market data from Polymarket",
+      "category": "Prediction Markets",
+      "price": "0.002",
+      "currency": "ETH"
+    },
+    {
+      "name": "analyze_market",
+      "description": "Analyze prediction market odds to find value bets",
+      "category": "Prediction Markets",
+      "price": "0.005",
+      "currency": "ETH"
+    },
+    {
+      "name": "get_trending_markets",
+      "description": "Get trending prediction markets by category",
+      "category": "Prediction Markets",
+      "price": "0.003",
+      "currency": "ETH"
+    },
+    {
+      "name": "search_markets",
+      "description": "Search prediction markets by query",
+      "category": "Prediction Markets",
+      "price": "0.002",
+      "currency": "ETH"
+    }
+  ],
+  "payment": {
+    "protocol": "x402",
+    "provider": "thirdweb",
+    "network": "eip155:8453",
+    "verification": "onchain"
+  }
+}
