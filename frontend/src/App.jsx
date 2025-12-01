@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
+import { useAccount } from 'wagmi';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Deploy from './pages/Deploy';
@@ -11,6 +12,35 @@ import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import useThemeStore from './store/theme';
 import { WagmiProvider, QueryClientProvider, queryClient, wagmiAdapter } from './config/wallet';
+import { initSyncManager, stopSyncManager } from './services/syncService';
+import { UserProvider } from './contexts/UserContext';
+
+/**
+ * Sync Service Initializer
+ * Initializes background sync when wallet is connected
+ */
+function SyncServiceManager() {
+  const { address, isConnected } = useAccount();
+
+  useEffect(() => {
+    if (isConnected && address) {
+      // Initialize sync service with 30-second intervals
+      console.log('🔄 Initializing sync service for user:', address);
+      initSyncManager(address, true);
+
+      return () => {
+        // Cleanup on disconnect
+        console.log('⏹️  Stopping sync service');
+        stopSyncManager();
+      };
+    } else {
+      // Stop sync if wallet disconnects
+      stopSyncManager();
+    }
+  }, [address, isConnected]);
+
+  return null;
+}
 
 /**
  * App Component
@@ -27,7 +57,9 @@ export default function App() {
   return (
     <WagmiProvider config={wagmiAdapter.wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <Router>
+        <UserProvider>
+          <SyncServiceManager />
+          <Router>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route
@@ -88,6 +120,7 @@ export default function App() {
             />
           </Routes>
         </Router>
+        </UserProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

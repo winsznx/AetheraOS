@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, User } from 'lucide-react';
 import Sidebar from './Sidebar';
 import ThemeToggle from '../ThemeToggle';
 import ConnectWalletButton from '../ConnectWalletButton';
+import { useUser } from '../../contexts/UserContext';
 import { cn } from '../../utils/cn';
 
 /**
@@ -13,6 +14,7 @@ import { cn } from '../../utils/cn';
  * @param {string} className - Additional classes for main content area
  */
 export default function DashboardLayout({ children, className = '' }) {
+  const { user, isConnected } = useUser();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -67,13 +69,25 @@ export default function DashboardLayout({ children, className = '' }) {
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-display font-bold text-brand-black dark:text-white">
-                  {/* Title will be set by individual pages */}
-                </h1>
-              </div>
+              {/* User Profile Display */}
+              {isConnected && user && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm font-medium text-brand-black dark:text-white">
+                    {user.displayName}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-4">
+              {/* Mobile: Show user name */}
+              {isConnected && user && (
+                <div className="sm:hidden flex items-center gap-2">
+                  <span className="text-sm font-medium text-brand-black dark:text-white">
+                    {user.displayName}
+                  </span>
+                </div>
+              )}
               <ConnectWalletButton />
               <ThemeToggle />
             </div>

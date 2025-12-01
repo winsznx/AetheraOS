@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Menu, X, Cpu } from 'lucide-react';
+import { Menu, X, Cpu, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import Button from './Button';
 import ConnectWalletButton from './ConnectWalletButton';
 import Container from './Container';
+import { useUser } from '../contexts/UserContext';
 import { cn } from '../utils/cn';
 
 /**
@@ -13,6 +14,7 @@ import { cn } from '../utils/cn';
  * @param {Array} links - Navigation links
  */
 export default function Navbar({ links = defaultLinks }) {
+  const { user, isConnected } = useUser();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -59,6 +61,14 @@ export default function Navbar({ links = defaultLinks }) {
 
           {/* Right Actions */}
           <div className="hidden md:flex items-center gap-4">
+            {isConnected && user && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <span className="text-sm font-medium text-brand-black dark:text-white">
+                  {user.displayName}
+                </span>
+              </div>
+            )}
             <ThemeToggle />
             <ConnectWalletButton />
             <Button
@@ -95,6 +105,16 @@ export default function Navbar({ links = defaultLinks }) {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-brand-light dark:border-gray-700">
             <div className="flex flex-col gap-4">
+              {/* User Profile in Mobile Menu */}
+              {isConnected && user && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg mb-2">
+                  <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-sm font-medium text-brand-black dark:text-white">
+                    {user.displayName}
+                  </span>
+                </div>
+              )}
+
               {links.map((link, index) => (
                 <a
                   key={index}
