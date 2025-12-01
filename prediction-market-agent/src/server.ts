@@ -4,26 +4,34 @@
  * Extends the MCP Hono Server DO to provide prediction market tools
  */
 
-import { McpServer, Implementation } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Implementation } from '@modelcontextprotocol/sdk/types.js';
 import { DurableObject } from 'cloudflare:workers';
 import { Hono } from 'hono';
 import { setupPredictionMarketTools } from './tools.js';
+import type { Env } from './types.js';
 
 export class PredictionMarketMcpServer extends DurableObject {
   private app: Hono;
   private mcpServer: McpServer;
+  private registeredTools: Map<string, any>;
 
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
+
+    // Initialize tools registry
+    this.registeredTools = new Map();
 
     // Initialize Hono app
     this.app = new Hono();
 
     // Initialize MCP Server
-    this.mcpServer = new McpServer({
+    const serverInfo: Implementation = {
       name: 'prediction-market-agent',
       version: '1.0.0'
-    });
+    };
+
+    this.mcpServer = new McpServer(serverInfo);
 
     // Configure MCP tools
     this.configureServer(this.mcpServer);
@@ -36,8 +44,8 @@ export class PredictionMarketMcpServer extends DurableObject {
    * Configure MCP Server with tools, resources, and prompts
    */
   private configureServer(server: McpServer): void {
-    // Setup prediction market tools
-    setupPredictionMarketTools(server);
+    // Setup prediction market tools and store references
+    setupPredictionMarketTools(server, this.registeredTools);
   }
 
   /**
@@ -99,7 +107,13 @@ export class PredictionMarketMcpServer extends DurableObject {
           };
 
         case 'tools/list':
-          const tools = await this.mcpServer.listTools();
+          // Build tools list from registered tools
+          const tools = Array.from(this.registeredTools.values()).map(tool => ({
+            name: tool.name,
+            description: tool.description,
+            inputSchema: tool.inputSchema
+          }));
+
           return {
             jsonrpc: '2.0',
             id,
@@ -107,11 +121,27 @@ export class PredictionMarketMcpServer extends DurableObject {
           };
 
         case 'tools/call':
-          const result = await this.mcpServer.callTool(params.name, params.arguments || {});
+          const toolName = params.name;
+          const tool = this.registeredTools.get(toolName);
+
+          if (!tool) {
+            return {
+              jsonrpc: '2.0',
+              id,
+              error: {
+                code: -32602,
+                message: `Tool not found: ${toolName}`
+              }
+            };
+          }
+
+          // Call the tool's callback with arguments
+          const toolResult = await tool.callback(params.arguments || {});
+
           return {
             jsonrpc: '2.0',
             id,
-            result
+            result: toolResult
           };
 
         default:
