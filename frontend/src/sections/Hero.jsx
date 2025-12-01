@@ -26,7 +26,7 @@ export default function Hero({
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-white dark:bg-gray-900">
       <Container className="relative z-10">
-        <div className="grid lg:grid-cols-[1fr_1.3fr] gap-16 items-center py-20">
+        <div className="grid lg:grid-cols-[1fr_1.3fr] gap-16 items-center pt-8 pb-12">
           {/* Left Column - Main Content */}
           <div className="text-center lg:text-left">
           {/* Badge */}
