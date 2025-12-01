@@ -1,95 +1,122 @@
 import { useState, useEffect } from 'react';
 import { FileText, Plus, Filter, Search } from 'lucide-react';
+import { useAccount } from 'wagmi';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import TaskList from '../components/task/TaskList';
 import TaskCreationForm from '../components/task/TaskCreationForm';
 import useThemeStore from '../store/theme';
+import { getTasks, createTask, updateTask } from '../lib/api';
 
 /**
  * Tasks Page
- * View and manage all tasks
+ * View and manage all tasks with per-user persistence
  */
 export default function Tasks() {
   const { initTheme } = useThemeStore();
+  const { address } = useAccount();
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     initTheme();
-    loadTasks();
   }, [initTheme]);
 
+  // Load tasks from backend when wallet connects
+  useEffect(() => {
+    if (address) {
+      loadTasks();
+    } else {
+      // No wallet connected - show empty state
+      setTasks([]);
+    }
+  }, [address]);
+
   const loadTasks = async () => {
+    if (!address) return;
+
+    setLoading(true);
     try {
-      // TODO: Edenlayer Protocol doesn't currently expose a /tasks list endpoint
-      // Tasks are executed and tracked individually by taskId
-      // For now, we'll use local storage to track user's task history
-      const storedTasks = localStorage.getItem('aetheraos-task-history');
-      if (storedTasks) {
-        setTasks(JSON.parse(storedTasks));
+      // Load tasks from backend database
+      const response = await getTasks({ requester: address });
+
+      if (response.success && response.tasks) {
+        setTasks(response.tasks);
       } else {
+        console.warn('Failed to load tasks from backend');
         setTasks([]);
       }
     } catch (error) {
       console.error('Failed to load tasks:', error);
       setTasks([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleTaskCreated = async (taskData) => {
     try {
-      // Add task to history with timestamp
-      const taskRecord = {
-        id: taskData.taskId,
+      if (!address) {
+        alert('Please connect your wallet first');
+        return;
+      }
+
+      // Create task in backend database
+      const response = await createTask({
+        title: taskData.title || `Task ${taskData.taskId}`,
+        description: taskData.description || taskData.operation,
+        budget: taskData.budget || '0',
+        requester: address,
         taskId: taskData.taskId,
         agentId: taskData.agentId,
         operation: taskData.operation,
         params: taskData.params,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      };
+        status: 'OPEN'
+      });
 
-      const updatedTasks = [taskRecord, ...tasks];
-      setTasks(updatedTasks);
+      if (response.success) {
+        await loadTasks();
+        setShowTaskForm(false);
 
-      // Save to localStorage
-      localStorage.setItem('aetheraos-task-history', JSON.stringify(updatedTasks));
-
-      setShowTaskForm(false);
-
-      // Optionally poll for status updates
-      pollTaskStatus(taskData.taskId);
+        // Poll for status updates from Edenlayer
+        pollTaskStatus(taskData.taskId);
+      } else {
+        throw new Error(response.error || 'Failed to create task');
+      }
     } catch (error) {
       console.error('Failed to handle task creation:', error);
+      alert(`Failed to create task: ${error.message}`);
     }
   };
 
   const pollTaskStatus = async (taskId) => {
+    if (!address) return;
+
     try {
       const { getTaskStatus } = await import('../lib/edenlayer');
 
-      // Poll for status updates (simple implementation)
+      // Poll for status updates from Edenlayer
       const checkStatus = async () => {
         try {
           const status = await getTaskStatus(taskId);
 
-          setTasks(prev => prev.map(task =>
-            task.taskId === taskId
-              ? { ...task, status: status.state, result: status.result }
-              : task
-          ));
+          // Find task in backend database
+          const task = tasks.find(t => t.taskId === taskId);
 
-          // Update localStorage
-          const updatedTasks = tasks.map(task =>
-            task.taskId === taskId
-              ? { ...task, status: status.state, result: status.result }
-              : task
-          );
-          localStorage.setItem('aetheraos-task-history', JSON.stringify(updatedTasks));
+          if (task && task.id) {
+            // Update backend database
+            await updateTask(task.id, {
+              status: status.state?.toUpperCase() || 'IN_PROGRESS',
+              result: status.result
+            });
+
+            // Reload tasks to reflect changes
+            await loadTasks();
+          }
 
           // Continue polling if not completed or failed
           if (status.state === 'pending' || status.state === 'executing') {
@@ -107,8 +134,10 @@ export default function Tasks() {
   };
 
   const filteredTasks = tasks.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         task.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      (task.title?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+      (task.description?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
+      (task.operation?.toLowerCase().includes(searchQuery.toLowerCase()) || false);
     const matchesFilter = filterStatus === 'all' || task.status === filterStatus;
     return matchesSearch && matchesFilter;
   });

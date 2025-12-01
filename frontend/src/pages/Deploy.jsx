@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Rocket, Upload, Settings, CheckCircle, ArrowRight } from 'lucide-react';
+import { useAccount } from 'wagmi';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { registerAgent } from '../lib/edenlayer';
+import { createAgent } from '../lib/api';
 import useThemeStore from '../store/theme';
 import { cn } from '../utils/cn';
 
@@ -13,8 +15,10 @@ import { cn } from '../utils/cn';
  */
 export default function Deploy() {
   const { initTheme } = useThemeStore();
+  const { address } = useAccount();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [deployedAgentId, setDeployedAgentId] = useState(null);
   const [agentConfig, setAgentConfig] = useState({
     name: '',
     description: '',
@@ -42,9 +46,14 @@ export default function Deploy() {
   };
 
   const handleDeploy = async () => {
+    if (!address) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Register agent in Edenlayer with proper MCP schema
+      // 1. Register agent in Edenlayer with proper MCP schema
       const agentId = await registerAgent({
         name: agentConfig.name,
         description: agentConfig.description,
@@ -68,7 +77,23 @@ export default function Deploy() {
         chatUrl: ''
       });
 
-      console.log('Agent deployed successfully:', agentId);
+      console.log('Agent registered in Edenlayer:', agentId);
+
+      // 2. Save agent to backend database
+      const backendAgent = await createAgent({
+        name: agentConfig.name,
+        description: agentConfig.description,
+        endpoint: agentConfig.endpoint,
+        owner: address,
+        agentId: agentId,
+        capabilities: agentConfig.capabilities,
+        pricingModel: agentConfig.pricingModel,
+        priceAmount: agentConfig.priceAmount
+      });
+
+      console.log('Agent saved to backend:', backendAgent);
+
+      setDeployedAgentId(agentId);
       setStep(4);
     } catch (error) {
       console.error('Deployment failed:', error);

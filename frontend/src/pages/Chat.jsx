@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, Send, Users, Plus } from 'lucide-react';
+import { useAccount } from 'wagmi';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { createRoom, getRoomMessages, listRooms } from '../lib/edenlayer';
+import { createRoom as createEdenlayerRoom, getRoomMessages as getEdenlayerMessages, listRooms as listEdenlayerRooms } from '../lib/edenlayer';
 import { createWebSocketClient } from '../lib/realtimeClient';
+import { getChatRooms, createChatRoom, getRoomMessages, sendMessage } from '../lib/api';
 import useThemeStore from '../store/theme';
 import { cn } from '../utils/cn';
 
@@ -14,6 +16,7 @@ import { cn } from '../utils/cn';
  */
 export default function Chat() {
   const { initTheme } = useThemeStore();
+  const { address } = useAccount();
   const [rooms, setRooms] = useState([]);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -26,8 +29,13 @@ export default function Chat() {
 
   useEffect(() => {
     initTheme();
-    loadRooms();
   }, [initTheme]);
+
+  useEffect(() => {
+    if (address) {
+      loadRooms();
+    }
+  }, [address]);
 
   useEffect(() => {
     if (selectedRoom) {
@@ -51,16 +59,33 @@ export default function Chat() {
   };
 
   const loadRooms = async () => {
+    if (!address) return;
+
     try {
       setLoading(true);
-      const roomList = await listRooms();
-      setRooms(roomList);
 
-      if (roomList.length > 0 && !selectedRoom) {
-        setSelectedRoom(roomList[0]);
+      // Load rooms from backend database
+      const backendResponse = await getChatRooms(address);
+
+      if (backendResponse.success && backendResponse.rooms) {
+        setRooms(backendResponse.rooms);
+
+        if (backendResponse.rooms.length > 0 && !selectedRoom) {
+          setSelectedRoom(backendResponse.rooms[0]);
+        }
+      } else {
+        // Fallback to Edenlayer if backend fails
+        console.warn('Backend rooms failed, using Edenlayer fallback');
+        const edenlayerRooms = await listEdenlayerRooms();
+        setRooms(edenlayerRooms);
+
+        if (edenlayerRooms.length > 0 && !selectedRoom) {
+          setSelectedRoom(edenlayerRooms[0]);
+        }
       }
     } catch (error) {
       console.error('Failed to load rooms:', error);
+      setRooms([]);
     } finally {
       setLoading(false);
     }
@@ -68,8 +93,16 @@ export default function Chat() {
 
   const loadMessages = async (roomId) => {
     try {
-      const messageHistory = await getRoomMessages(roomId, { limit: 50 });
-      setMessages(messageHistory);
+      // Load messages from backend database
+      const backendResponse = await getRoomMessages(roomId, { limit: 50 });
+
+      if (backendResponse.success && backendResponse.messages) {
+        setMessages(backendResponse.messages);
+      } else {
+        // Fallback to Edenlayer
+        const edenlayerMessages = await getEdenlayerMessages(roomId, { limit: 50 });
+        setMessages(edenlayerMessages);
+      }
     } catch (error) {
       console.error('Failed to load messages:', error);
       setMessages([]);
@@ -98,10 +131,23 @@ export default function Chat() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !wsClientRef.current) return;
+    if (!newMessage.trim() || !address) return;
 
     try {
-      wsClientRef.current.sendMessage(newMessage);
+      // Send via WebSocket if connected
+      if (wsClientRef.current) {
+        wsClientRef.current.sendMessage(newMessage);
+      }
+
+      // Also save to backend database for persistence
+      if (selectedRoom) {
+        await sendMessage(selectedRoom.id, {
+          content: newMessage,
+          sender: address,
+          messageType: 'text'
+        });
+      }
+
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -110,16 +156,30 @@ export default function Chat() {
   };
 
   const handleCreateRoom = async () => {
-    if (!newRoomName.trim()) return;
+    if (!newRoomName.trim() || !address) return;
 
     try {
-      const room = await createRoom({
+      // Create in Edenlayer first
+      const edenlayerRoom = await createEdenlayerRoom({
         name: newRoomName,
         type: 'CHAT',
         description: 'User-created chat room',
         maxParticipants: 10,
         private: false
       });
+
+      // Save to backend database
+      const backendResponse = await createChatRoom({
+        roomId: edenlayerRoom.id,
+        name: newRoomName,
+        description: 'User-created chat room',
+        type: 'CHAT',
+        private: false,
+        maxParticipants: 10,
+        participants: [address]
+      });
+
+      const room = backendResponse.success ? backendResponse.room : edenlayerRoom;
 
       setRooms(prev => [room, ...prev]);
       setSelectedRoom(room);

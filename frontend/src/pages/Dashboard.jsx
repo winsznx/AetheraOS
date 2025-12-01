@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LayoutDashboard, Plus, TrendingUp, Clock, DollarSign } from 'lucide-react';
+import { useAccount } from 'wagmi';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -7,6 +8,7 @@ import TaskList from '../components/task/TaskList';
 import TaskCreationForm from '../components/task/TaskCreationForm';
 import AgentCard from '../components/agent/AgentCard';
 import useThemeStore from '../store/theme';
+import { getTasks, getAgents, getUserStats } from '../lib/api';
 
 /**
  * Dashboard Page
@@ -14,6 +16,7 @@ import useThemeStore from '../store/theme';
  */
 export default function Dashboard() {
   const { initTheme } = useThemeStore();
+  const { address } = useAccount();
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [agents, setAgents] = useState([]);
@@ -21,45 +24,73 @@ export default function Dashboard() {
     totalTasks: 0,
     activeTasks: 0,
     completedTasks: 0,
-    totalEarnings: 0
+    totalEarnings: 0,
+    totalAgents: 0,
+    activeAgents: 0
   });
 
   useEffect(() => {
     initTheme();
-    loadDashboardData();
   }, [initTheme]);
 
+  useEffect(() => {
+    if (address) {
+      loadDashboardData();
+    }
+  }, [address]);
+
   const loadDashboardData = async () => {
+    if (!address) return;
+
     try {
-      // Load user's agents from Edenlayer
-      const { discoverAgents } = await import('../lib/edenlayer');
-      const userAgents = await discoverAgents([]);
+      // Load data from backend API
+      const [tasksResponse, agentsResponse, statsResponse] = await Promise.allSettled([
+        getTasks({ requester: address, limit: 10 }),
+        getAgents({ owner: address, limit: 5 }),
+        getUserStats(address)
+      ]);
 
-      // TODO: Filter to only user's own agents once we have ownership info
-      // For now showing all discovered agents
-      setAgents(userAgents.slice(0, 5)); // Limit to 5 for dashboard display
+      // Handle tasks
+      if (tasksResponse.status === 'fulfilled' && tasksResponse.value.success) {
+        setTasks(tasksResponse.value.tasks || []);
+      } else {
+        console.warn('Failed to load tasks:', tasksResponse.reason);
+        setTasks([]);
+      }
 
-      // TODO: Load user's tasks from Edenlayer task API
-      // For now using placeholder until task API is ready
-      const userTasks = [];
+      // Handle agents
+      if (agentsResponse.status === 'fulfilled' && agentsResponse.value.success) {
+        setAgents(agentsResponse.value.agents || []);
+      } else {
+        console.warn('Failed to load agents:', agentsResponse.reason);
+        setAgents([]);
+      }
 
-      setTasks(userTasks);
-      setStats({
-        totalTasks: userTasks.length,
-        activeTasks: userTasks.filter(t => t.state === 'pending' || t.state === 'running').length,
-        completedTasks: userTasks.filter(t => t.state === 'completed').length,
-        totalEarnings: 0.00 // TODO: Calculate from completed tasks
-      });
+      // Handle stats
+      if (statsResponse.status === 'fulfilled' && statsResponse.value.success) {
+        setStats(statsResponse.value.stats);
+      } else {
+        console.warn('Failed to load stats:', statsResponse.reason);
+        setStats({
+          totalTasks: 0,
+          activeTasks: 0,
+          completedTasks: 0,
+          totalEarnings: '0',
+          totalAgents: 0,
+          activeAgents: 0
+        });
+      }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
-      // Show empty state on error
       setAgents([]);
       setTasks([]);
       setStats({
         totalTasks: 0,
         activeTasks: 0,
         completedTasks: 0,
-        totalEarnings: 0
+        totalEarnings: '0',
+        totalAgents: 0,
+        activeAgents: 0
       });
     }
   };

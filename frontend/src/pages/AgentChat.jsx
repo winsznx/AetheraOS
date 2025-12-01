@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Brain, Send, Loader2, DollarSign, CheckCircle, AlertCircle } from 'lucide-react';
+import { useAccount } from 'wagmi';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import { getChatRooms, createChatRoom, getRoomMessages, sendMessage } from '../lib/api';
 import useThemeStore from '../store/theme';
 import { cn } from '../utils/cn';
 
@@ -14,22 +16,34 @@ const AGENT_URL = import.meta.env.VITE_AGENT_URL || 'https://aetheraos-autonomou
  */
 export default function AgentChat() {
   const { initTheme } = useThemeStore();
+  const { address } = useAccount();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [plan, setPlan] = useState(null);
   const [showPlan, setShowPlan] = useState(false);
+  const [agentRoomId, setAgentRoomId] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     initTheme();
-    // Add welcome message
-    setMessages([{
-      role: 'agent',
-      content: "Hi! I'm your blockchain intelligence agent. I can analyze wallets, detect whales, track smart money, and more!\n\nTry asking:\n• \"Analyze wallet 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb4\"\n• \"Find whale wallets on Base\"\n• \"Is wallet 0xABC a smart money trader?\"\n• \"What's the risk score for wallet 0xDEF?\"",
-      timestamp: new Date().toISOString()
-    }]);
   }, [initTheme]);
+
+  // Load chat history from backend when wallet connects
+  useEffect(() => {
+    if (address) {
+      loadChatHistory();
+    } else {
+      // Show welcome message if not connected
+      setMessages([{
+        role: 'agent',
+        content: "Hi! I'm your blockchain intelligence agent. I can analyze wallets, detect whales, track smart money, and more!\n\nTry asking:\n• \"Analyze wallet 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb4\"\n• \"Find whale wallets on Base\"\n• \"Is wallet 0xABC a smart money trader?\"\n• \"What's the risk score for wallet 0xDEF?\"",
+        timestamp: new Date().toISOString()
+      }]);
+      setLoadingHistory(false);
+    }
+  }, [address]);
 
   useEffect(() => {
     scrollToBottom();
@@ -37,6 +51,96 @@ export default function AgentChat() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  /**
+   * Load chat history from backend database
+   */
+  const loadChatHistory = async () => {
+    if (!address) return;
+
+    setLoadingHistory(true);
+    try {
+      // Get or create agent chat room for this user
+      const roomsResponse = await getChatRooms(address);
+
+      let agentRoom = null;
+
+      if (roomsResponse.success && roomsResponse.rooms) {
+        // Find existing agent chat room
+        agentRoom = roomsResponse.rooms.find(r => r.type === 'AGENT');
+      }
+
+      // Create room if it doesn't exist
+      if (!agentRoom) {
+        const createResponse = await createChatRoom({
+          name: `AI Agent Chat - ${address.slice(0, 6)}...${address.slice(-4)}`,
+          description: 'Autonomous AI Agent conversations',
+          type: 'AGENT',
+          private: true,
+          participants: [address]
+        });
+
+        if (createResponse.success) {
+          agentRoom = createResponse.room;
+        }
+      }
+
+      if (agentRoom) {
+        setAgentRoomId(agentRoom.id);
+
+        // Load message history
+        const messagesResponse = await getRoomMessages(agentRoom.id, { limit: 100 });
+
+        if (messagesResponse.success && messagesResponse.messages && messagesResponse.messages.length > 0) {
+          // Convert backend messages to chat format
+          const chatMessages = messagesResponse.messages.map(msg => ({
+            role: msg.sender === address ? 'user' : 'agent',
+            content: msg.content,
+            timestamp: msg.createdAt,
+            metadata: msg.metadata
+          }));
+
+          setMessages(chatMessages);
+        } else {
+          // Show welcome message for new conversations
+          setMessages([{
+            role: 'agent',
+            content: "Hi! I'm your blockchain intelligence agent. I can analyze wallets, detect whales, track smart money, and more!\n\nTry asking:\n• \"Analyze wallet 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb4\"\n• \"Find whale wallets on Base\"\n• \"Is wallet 0xABC a smart money trader?\"\n• \"What's the risk score for wallet 0xDEF?\"",
+            timestamp: new Date().toISOString()
+          }]);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+      // Show welcome message on error
+      setMessages([{
+        role: 'agent',
+        content: "Hi! I'm your blockchain intelligence agent. Connect your wallet to save conversation history!",
+        timestamp: new Date().toISOString()
+      }]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  /**
+   * Save message to backend database
+   */
+  const saveMessageToBackend = async (role, content, metadata = null) => {
+    if (!address || !agentRoomId) return;
+
+    try {
+      await sendMessage(agentRoomId, {
+        content: content,
+        sender: role === 'user' ? address : 'AGENT',
+        messageType: 'text',
+        metadata: metadata
+      });
+    } catch (error) {
+      console.error('Failed to save message to backend:', error);
+      // Don't throw - message is already shown in UI
+    }
   };
 
   const handleSend = async () => {
@@ -49,17 +153,21 @@ export default function AgentChat() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const userQuery = input;
     setInput('');
     setLoading(true);
     setPlan(null);
     setShowPlan(false);
+
+    // Save user message to backend
+    await saveMessageToBackend('user', userQuery);
 
     try {
       // Call the autonomous agent
       const response = await fetch(`${AGENT_URL}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: input })
+        body: JSON.stringify({ query: userQuery })
       });
 
       if (!response.ok) {
@@ -73,13 +181,18 @@ export default function AgentChat() {
         setPlan(result.plan);
         setShowPlan(true);
 
+        const planMessage = `I've created a plan to answer your question:\n\n${result.plan.reasoning}\n\nTotal cost: ${result.plan.totalCost}\nSteps: ${result.plan.steps.length}`;
+
         // Add planning message
         setMessages(prev => [...prev, {
           role: 'agent',
-          content: `I've created a plan to answer your question:\n\n${result.plan.reasoning}\n\nTotal cost: ${result.plan.totalCost}\nSteps: ${result.plan.steps.length}`,
+          content: planMessage,
           timestamp: new Date().toISOString(),
           isPlan: true
         }]);
+
+        // Save to backend
+        await saveMessageToBackend('agent', planMessage, { plan: result.plan });
       }
 
       // Show conversational response if available
@@ -88,13 +201,18 @@ export default function AgentChat() {
           // Skip the user message (it's already shown)
           if (line.startsWith('**You:**')) return;
 
-          setTimeout(() => {
+          const agentResponse = line.replace('**Agent:** ', '');
+
+          setTimeout(async () => {
             setMessages(prev => [...prev, {
               role: 'agent',
-              content: line.replace('**Agent:** ', ''),
+              content: agentResponse,
               timestamp: new Date().toISOString(),
               isConversation: true
             }]);
+
+            // Save to backend
+            await saveMessageToBackend('agent', agentResponse, { conversation: true });
           }, idx * 500); // Stagger messages for effect
         });
       } else if (result.synthesis) {
@@ -117,23 +235,36 @@ export default function AgentChat() {
           timestamp: new Date().toISOString(),
           metadata: result.metadata
         }]);
+
+        // Save to backend
+        await saveMessageToBackend('agent', response, result.metadata);
       } else {
         // Fallback if no conversation or synthesis
+        const fallbackResponse = JSON.stringify(result, null, 2);
+
         setMessages(prev => [...prev, {
           role: 'agent',
-          content: JSON.stringify(result, null, 2),
+          content: fallbackResponse,
           timestamp: new Date().toISOString()
         }]);
+
+        // Save to backend
+        await saveMessageToBackend('agent', fallbackResponse);
       }
 
     } catch (error) {
       console.error('Agent error:', error);
+      const errorMessage = `Sorry, I encountered an error: ${error.message}\n\nPlease make sure the agent is running at ${AGENT_URL}`;
+
       setMessages(prev => [...prev, {
         role: 'agent',
-        content: `Sorry, I encountered an error: ${error.message}\n\nPlease make sure the agent is running at ${AGENT_URL}`,
+        content: errorMessage,
         timestamp: new Date().toISOString(),
         isError: true
       }]);
+
+      // Save error to backend too
+      await saveMessageToBackend('agent', errorMessage, { error: true });
     } finally {
       setLoading(false);
     }

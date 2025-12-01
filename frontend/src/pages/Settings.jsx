@@ -5,6 +5,8 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import useThemeStore from '../store/theme';
+import { getUser, updateUser } from '../lib/api';
+import { useUser } from '../contexts/UserContext';
 
 /**
  * Settings Page
@@ -13,11 +15,15 @@ import useThemeStore from '../store/theme';
 export default function Settings() {
   const { initTheme, theme, toggleTheme } = useThemeStore();
   const { address, isConnected } = useAccount();
+  const { refreshUser } = useUser();
   const [activeTab, setActiveTab] = useState('profile');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
     displayName: '',
     email: '',
-    notificationsEnabled: true,
+    bio: '',
+    notifications: true,
     emailNotifications: false,
     taskAlerts: true,
     agentAlerts: true
@@ -27,10 +33,66 @@ export default function Settings() {
     initTheme();
   }, [initTheme]);
 
-  const handleSaveSettings = () => {
-    // TODO: Save settings to backend
-    console.log('Saving settings:', settings);
-    alert('Settings saved successfully!');
+  useEffect(() => {
+    if (address) {
+      loadUserSettings();
+    }
+  }, [address]);
+
+  const loadUserSettings = async () => {
+    if (!address) return;
+
+    setLoading(true);
+    try {
+      const response = await getUser(address);
+      if (response.success && response.user) {
+        setSettings({
+          displayName: response.user.displayName || '',
+          email: response.user.email || '',
+          bio: response.user.bio || '',
+          notifications: response.user.notifications ?? true,
+          emailNotifications: response.user.emailNotifications ?? false,
+          taskAlerts: true, // These are stored in user preferences
+          agentAlerts: true
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load user settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    if (!address) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await updateUser(address, {
+        displayName: settings.displayName,
+        email: settings.email,
+        bio: settings.bio,
+        theme: theme,
+        notifications: settings.notifications,
+        emailNotifications: settings.emailNotifications
+      });
+
+      if (response.success) {
+        // Refresh user context to update profile name everywhere
+        refreshUser();
+        alert('Settings saved successfully!');
+      } else {
+        throw new Error(response.error || 'Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert(`Failed to save settings: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const tabs = [
@@ -121,10 +183,11 @@ export default function Settings() {
                   </div>
 
                   <Button
-                    label="Save Changes"
+                    label={saving ? "Saving..." : "Save Changes"}
                     icon={<Save className="w-5 h-5" />}
                     onClick={handleSaveSettings}
                     variant="primary"
+                    disabled={saving || !isConnected}
                     className="mt-6"
                   />
                 </div>
@@ -246,10 +309,11 @@ export default function Settings() {
                   </label>
 
                   <Button
-                    label="Save Preferences"
+                    label={saving ? "Saving..." : "Save Preferences"}
                     icon={<Save className="w-5 h-5" />}
                     onClick={handleSaveSettings}
                     variant="primary"
+                    disabled={saving || !isConnected}
                     className="mt-6"
                   />
                 </div>
