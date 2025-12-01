@@ -69,11 +69,11 @@ console.log('✅ Middleware configured');
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({
+  res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    database: 'connected'
+    database: 'connected' // You might want to actually check DB connection here
   });
 });
 
