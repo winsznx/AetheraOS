@@ -1,7 +1,10 @@
 # Multi-stage build for AetheraOS Backend
-FROM node:18-alpine AS builder
+FROM node:18-slim AS builder
 
 WORKDIR /app
+
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl
 
 # Copy package files
 COPY package*.json ./
@@ -14,7 +17,10 @@ RUN npm ci --omit=dev
 RUN npx prisma generate
 
 # Production stage
-FROM node:18-alpine
+FROM node:18-slim
+
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
