@@ -1,7 +1,7 @@
 {
   "name": "chainintel-mcp",
-  "version": "2.0.0",
-  "description": "All-in-one AI-powered platform: Wallet intelligence, task escrow, IPFS storage, and prediction markets",
+  "version": "3.0.0",
+  "description": "All-in-one AI-powered platform: Wallet intelligence, task escrow, IPFS storage, and advanced prediction market analysis with deep research",
   "transport": {
     "type": "http",
     "url": "https://chainintel-mcp.timjosh507.workers.dev"
@@ -20,7 +20,8 @@
         "PLATFORM_WALLET": "${PLATFORM_WALLET}",
         "PINATA_API_KEY": "${PINATA_API_KEY}",
         "PINATA_SECRET_KEY": "${PINATA_SECRET_KEY}",
-        "PINATA_JWT": "${PINATA_JWT}"
+        "PINATA_JWT": "${PINATA_JWT}",
+        "POLYMARKET_API_KEY": "${POLYMARKET_API_KEY}"
       },
       "timeout": 60000
     }
@@ -132,31 +133,59 @@
       "currency": "ETH"
     },
     {
-      "name": "get_market_data",
-      "description": "Fetch prediction market data from Polymarket",
-      "category": "Prediction Markets",
-      "price": "0.002",
-      "currency": "ETH"
-    },
-    {
-      "name": "analyze_market",
-      "description": "Analyze prediction market odds to find value bets",
-      "category": "Prediction Markets",
-      "price": "0.005",
-      "currency": "ETH"
-    },
-    {
-      "name": "get_trending_markets",
-      "description": "Get trending prediction markets by category",
-      "category": "Prediction Markets",
+      "name": "get_market_details",
+      "description": "Get comprehensive market data with tags, metadata, and comments",
+      "category": "Prediction Markets - Advanced",
       "price": "0.003",
       "currency": "ETH"
     },
     {
-      "name": "search_markets",
-      "description": "Search prediction markets by query",
-      "category": "Prediction Markets",
-      "price": "0.002",
+      "name": "analyze_market_sentiment",
+      "description": "Deep sentiment analysis from price, volume, and comment signals",
+      "category": "Prediction Markets - Advanced",
+      "price": "0.008",
+      "currency": "ETH"
+    },
+    {
+      "name": "assess_market_risk",
+      "description": "Multi-factor risk analysis with liquidity, volatility, and time decay",
+      "category": "Prediction Markets - Advanced",
+      "price": "0.007",
+      "currency": "ETH"
+    },
+    {
+      "name": "find_arbitrage",
+      "description": "Detect arbitrage opportunities across related markets",
+      "category": "Prediction Markets - Advanced",
+      "price": "0.012",
+      "currency": "ETH"
+    },
+    {
+      "name": "advanced_market_analysis",
+      "description": "Complete analysis with sentiment, risk, value bets, and price targets",
+      "category": "Prediction Markets - Advanced",
+      "price": "0.015",
+      "currency": "ETH"
+    },
+    {
+      "name": "search_markets_advanced",
+      "description": "Advanced search with filters, tags, and detailed metadata",
+      "category": "Prediction Markets - Advanced",
+      "price": "0.004",
+      "currency": "ETH"
+    },
+    {
+      "name": "analyze_market_correlation",
+      "description": "Analyze correlation and relationships between multiple markets",
+      "category": "Prediction Markets - Advanced",
+      "price": "0.010",
+      "currency": "ETH"
+    },
+    {
+      "name": "get_related_markets",
+      "description": "Find markets related by topic, event, or tags",
+      "category": "Prediction Markets - Advanced",
+      "price": "0.005",
       "currency": "ETH"
     }
   ],

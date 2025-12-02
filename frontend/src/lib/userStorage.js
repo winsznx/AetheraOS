@@ -10,9 +10,6 @@
  * 5. localStorage - UI preferences (fallback)
  */
 
-const CHAININTEL_MCP_URL = import.meta.env.VITE_CHAININTEL_MCP_URL || 'https://chainintel-mcp.timjosh507.workers.dev';
-const EDENLAYER_API_URL = import.meta.env.VITE_EDENLAYER_API_URL || 'https://api.edenlayer.com';
-
 /**
  * Get current user's wallet address (primary identifier)
  * @returns {string|null} Wallet address or null if not connected
@@ -432,44 +429,11 @@ export class SyncManager {
   }
 
   /**
-   * Sync agents from Edenlayer
-   */
-  async syncAgentsFromEdenlayer() {
-    try {
-      const { discoverAgents } = await import('./edenlayer');
-
-      // Get all agents from Edenlayer
-      const allAgents = await discoverAgents([]);
-
-      // Filter to user's agents (if Edenlayer provides ownership info)
-      // For now, just mark locally deployed agents
-      const localAgents = this.agentStore.getAgents();
-
-      for (const localAgent of localAgents) {
-        const remoteAgent = allAgents.find(a => a.id === localAgent.id || a.agentId === localAgent.agentId);
-
-        if (remoteAgent) {
-          this.agentStore.updateAgent(localAgent.id || localAgent.agentId, {
-            ...remoteAgent,
-            syncedAt: new Date().toISOString()
-          });
-        }
-      }
-
-      console.log('Agents synced from Edenlayer');
-    } catch (error) {
-      console.error('Error syncing agents from Edenlayer:', error);
-    }
-  }
-
-  /**
    * Full sync - Run on app load
+   * Note: Agent discovery happens on-demand in Marketplace UI
    */
   async syncAll() {
-    await Promise.all([
-      this.syncTasksFromBlockchain(),
-      this.syncAgentsFromEdenlayer()
-    ]);
+    await this.syncTasksFromBlockchain();
   }
 }
 
@@ -540,7 +504,7 @@ export function exportUserData() {
  * @param {Object} data - Exported data
  */
 export function importUserData(data) {
-  const { profile, tasks, agents, chats } = initUserStorage();
+  const { profile, tasks, agents } = initUserStorage();
 
   if (data.data.profile) profile.saveProfile(data.data.profile);
 
@@ -552,7 +516,7 @@ export function importUserData(data) {
     data.data.agents.forEach(agent => agents.addAgent(agent));
   }
 
-  // Chat history import handled separately per room
+  // NOTE: Chat history import is handled separately per room
 
   console.log('User data imported successfully');
 }

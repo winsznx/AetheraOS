@@ -311,6 +311,15 @@ export default function Deploy() {
                     </div>
                   </button>
                 </div>
+                {agentConfig.pricingModel === 'x402' && (
+                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300 flex items-start gap-2">
+                    <div className="mt-0.5">ℹ️</div>
+                    <div>
+                      Ensure your agent endpoint is configured to verify x402 payment headers.
+                      Use the <code>thirdweb/x402</code> SDK in your agent code.
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

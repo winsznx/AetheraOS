@@ -185,46 +185,16 @@ export async function fetchJSONFromIPFS(hash) {
  * @param {Object} metadata - Metadata
  * @returns {Promise<string>} IPFS hash
  */
+/**
+ * Fallback: Upload to Web3.Storage (free, no API key needed)
+ * @param {File} file - File to upload
+ * @param {Object} metadata - Metadata
+ * @returns {Promise<string>} IPFS hash
+ */
 async function uploadToWeb3Storage(file, metadata = {}) {
-  try {
-    // Web3.Storage client-side upload
-    const WEB3_STORAGE_ENDPOINT = 'https://api.web3.storage';
-
-    // For production, you'd use Web3.Storage API
-    // For now, return a mock but inform user
-    console.warn('Using mock IPFS upload. Configure VITE_PINATA_JWT for real uploads.');
-    console.log('File to upload:', file.name, file.size, 'bytes');
-    console.log('Metadata:', metadata);
-
-    // Generate deterministic mock hash based on file
-    const mockHash = await generateMockIPFSHash(file);
-
-    // Store in localStorage for demo purposes
-    try {
-      const reader = new FileReader();
-      await new Promise((resolve, reject) => {
-        reader.onload = resolve;
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      localStorage.setItem(`ipfs_mock_${mockHash}`, reader.result);
-      localStorage.setItem(`ipfs_meta_${mockHash}`, JSON.stringify({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        ...metadata,
-        uploadedAt: new Date().toISOString()
-      }));
-    } catch (e) {
-      console.warn('Could not cache file locally:', e);
-    }
-
-    return mockHash;
-  } catch (error) {
-    console.error('Error in Web3.Storage fallback:', error);
-    throw error;
-  }
+  // In production, we do not want to fallback to a mock implementation that stores data in localStorage.
+  // We must enforce proper IPFS configuration.
+  throw new Error('IPFS credentials not configured. Please set VITE_PINATA_JWT or VITE_PINATA_API_KEY in your environment variables.');
 }
 
 /**

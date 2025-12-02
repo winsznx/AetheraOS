@@ -8,12 +8,61 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 /**
  * Base fetch wrapper with error handling
  */
-async function apiRequest(endpoint, options = {}) {
+/**
+ * Get authentication headers for wallet-authenticated requests
+ */
+async function getAuthHeaders(signer) {
+  if (!signer) return {};
+
+  // Handle both ethers.js Signer and Thirdweb/Wagmi account objects
+  const address = signer.address || await signer.getAddress();
+  if (!address) return {};
+
+  const timestamp = Date.now().toString();
+  const message = `Login to AetheraOS: ${timestamp}`;
+
+  let signature;
+  if (typeof signer.signMessage === 'function') {
+    signature = await signer.signMessage(message);
+  } else if (signer.signMessage) {
+    // Wagmi/Viem style
+    signature = await signer.signMessage({ message });
+  } else {
+    console.warn('Signer does not support signMessage');
+    return {};
+  }
+
+  return {
+    'x-wallet-address': address,
+    'x-signature': signature,
+    'x-timestamp': timestamp
+  };
+}
+
+/**
+ * Base fetch wrapper with automatic authentication
+ */
+async function apiRequest(endpoint, options = {}, signer = null) {
   const url = `${API_URL}${endpoint}`;
+
+  // Add auth headers for state-changing operations or if explicitly requested
+  const method = options.method?.toUpperCase() || 'GET';
+  const needsAuth = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) || options.requireAuth;
+
+  let authHeaders = {};
+  if (needsAuth && signer) {
+    try {
+      authHeaders = await getAuthHeaders(signer);
+    } catch (error) {
+      console.error('Failed to generate auth headers:', error);
+      // Continue without headers, request might fail but better than crashing here
+    }
+  }
 
   const config = {
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...options.headers
     },
     ...options
@@ -21,10 +70,16 @@ async function apiRequest(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config);
+
+    // Handle 204 No Content
+    if (response.status === 204) {
+      return null;
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(data.error || `HTTP ${response.status}`);
     }
 
     return data;
@@ -51,11 +106,11 @@ export async function getUser(address) {
  * @param {string} address - Wallet address
  * @param {Object} updates - Profile updates
  */
-export async function updateUser(address, updates) {
+export async function updateUser(address, updates, signer) {
   return apiRequest(`/users/${address}`, {
     method: 'PUT',
     body: JSON.stringify(updates)
-  });
+  }, signer);
 }
 
 /**
@@ -83,11 +138,11 @@ export async function getTasks(filters = {}) {
  * Create new task
  * @param {Object} taskData - Task details
  */
-export async function createTask(taskData) {
+export async function createTask(taskData, signer) {
   return apiRequest('/tasks', {
     method: 'POST',
     body: JSON.stringify(taskData)
-  });
+  }, signer);
 }
 
 /**
@@ -156,11 +211,11 @@ export async function getAgents(filters = {}) {
  * Create/register new agent
  * @param {Object} agentData - Agent details
  */
-export async function createAgent(agentData) {
+export async function createAgent(agentData, signer) {
   return apiRequest('/agents', {
     method: 'POST',
     body: JSON.stringify(agentData)
-  });
+  }, signer);
 }
 
 /**
@@ -176,11 +231,11 @@ export async function getAgent(id) {
  * @param {string} id - Agent database ID
  * @param {Object} updates - Agent updates
  */
-export async function updateAgent(id, updates) {
-  return apiRequest(`/agents/${id}`, {
+export async function updateAgent(agentId, updates, signer) {
+  return apiRequest(`/agents/${agentId}`, {
     method: 'PUT',
     body: JSON.stringify(updates)
-  });
+  }, signer);
 }
 
 /**

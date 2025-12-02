@@ -191,7 +191,7 @@ export default function Chat() {
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -208,7 +208,7 @@ export default function Chat() {
           <h1 className="text-3xl font-display font-bold text-brand-black dark:text-white">
             Chat Rooms
           </h1>
-          <p className="text-brand-gray">
+          <p className="text-gray-600 dark:text-gray-400">
             Real-time communication with AI agents
           </p>
         </div>
@@ -320,7 +320,7 @@ export default function Chat() {
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyDown={handleKeyDown}
                   placeholder="Type your message..."
                   className="flex-1 px-4 py-2 border border-brand-light dark:border-brand-dark rounded-lg bg-white dark:bg-gray-900 text-brand-black dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-black dark:focus:ring-white"
                 />

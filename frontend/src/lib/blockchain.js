@@ -20,18 +20,18 @@ const ACTIVE_CHAIN = chains[ACTIVE_CHAIN_NAME] || baseSepolia;
 // TaskEscrow contract ABI
 export const TASK_ESCROW_ABI = [
   {
-    "inputs": [{"internalType": "address", "name": "_platformWallet", "type": "address"}],
+    "inputs": [{ "internalType": "address", "name": "_platformWallet", "type": "address" }],
     "stateMutability": "nonpayable",
     "type": "constructor"
   },
   {
     "anonymous": false,
     "inputs": [
-      {"indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256"},
-      {"indexed": true, "internalType": "address", "name": "requester", "type": "address"},
-      {"indexed": false, "internalType": "string", "name": "title", "type": "string"},
-      {"indexed": false, "internalType": "uint256", "name": "budget", "type": "uint256"},
-      {"indexed": false, "internalType": "uint256", "name": "deadline", "type": "uint256"}
+      { "indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "requester", "type": "address" },
+      { "indexed": false, "internalType": "string", "name": "title", "type": "string" },
+      { "indexed": false, "internalType": "uint256", "name": "budget", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "deadline", "type": "uint256" }
     ],
     "name": "TaskCreated",
     "type": "event"
@@ -39,8 +39,8 @@ export const TASK_ESCROW_ABI = [
   {
     "anonymous": false,
     "inputs": [
-      {"indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256"},
-      {"indexed": true, "internalType": "address", "name": "worker", "type": "address"}
+      { "indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "worker", "type": "address" }
     ],
     "name": "TaskClaimed",
     "type": "event"
@@ -48,8 +48,8 @@ export const TASK_ESCROW_ABI = [
   {
     "anonymous": false,
     "inputs": [
-      {"indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256"},
-      {"indexed": false, "internalType": "string", "name": "proofHash", "type": "string"}
+      { "indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256" },
+      { "indexed": false, "internalType": "string", "name": "proofHash", "type": "string" }
     ],
     "name": "WorkSubmitted",
     "type": "event"
@@ -57,8 +57,8 @@ export const TASK_ESCROW_ABI = [
   {
     "anonymous": false,
     "inputs": [
-      {"indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256"},
-      {"indexed": false, "internalType": "bool", "name": "approved", "type": "bool"}
+      { "indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256" },
+      { "indexed": false, "internalType": "bool", "name": "approved", "type": "bool" }
     ],
     "name": "TaskVerified",
     "type": "event"
@@ -66,27 +66,27 @@ export const TASK_ESCROW_ABI = [
   {
     "anonymous": false,
     "inputs": [
-      {"indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256"},
-      {"indexed": true, "internalType": "address", "name": "worker", "type": "address"},
-      {"indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256"},
-      {"indexed": false, "internalType": "uint256", "name": "platformFee", "type": "uint256"}
+      { "indexed": true, "internalType": "uint256", "name": "taskId", "type": "uint256" },
+      { "indexed": true, "internalType": "address", "name": "worker", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" },
+      { "indexed": false, "internalType": "uint256", "name": "platformFee", "type": "uint256" }
     ],
     "name": "PaymentReleased",
     "type": "event"
   },
   {
     "inputs": [
-      {"internalType": "string", "name": "title", "type": "string"},
-      {"internalType": "string", "name": "description", "type": "string"},
-      {"internalType": "uint256", "name": "deadline", "type": "uint256"}
+      { "internalType": "string", "name": "title", "type": "string" },
+      { "internalType": "string", "name": "description", "type": "string" },
+      { "internalType": "uint256", "name": "deadline", "type": "uint256" }
     ],
     "name": "createTask",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "payable",
     "type": "function"
   },
   {
-    "inputs": [{"internalType": "uint256", "name": "taskId", "type": "uint256"}],
+    "inputs": [{ "internalType": "uint256", "name": "taskId", "type": "uint256" }],
     "name": "claimTask",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -94,8 +94,8 @@ export const TASK_ESCROW_ABI = [
   },
   {
     "inputs": [
-      {"internalType": "uint256", "name": "taskId", "type": "uint256"},
-      {"internalType": "string", "name": "proofHash", "type": "string"}
+      { "internalType": "uint256", "name": "taskId", "type": "uint256" },
+      { "internalType": "string", "name": "proofHash", "type": "string" }
     ],
     "name": "submitWork",
     "outputs": [],
@@ -104,8 +104,8 @@ export const TASK_ESCROW_ABI = [
   },
   {
     "inputs": [
-      {"internalType": "uint256", "name": "taskId", "type": "uint256"},
-      {"internalType": "bool", "name": "approved", "type": "bool"}
+      { "internalType": "uint256", "name": "taskId", "type": "uint256" },
+      { "internalType": "bool", "name": "approved", "type": "bool" }
     ],
     "name": "verifyWork",
     "outputs": [],
@@ -113,22 +113,22 @@ export const TASK_ESCROW_ABI = [
     "type": "function"
   },
   {
-    "inputs": [{"internalType": "uint256", "name": "taskId", "type": "uint256"}],
+    "inputs": [{ "internalType": "uint256", "name": "taskId", "type": "uint256" }],
     "name": "getTask",
     "outputs": [
       {
         "components": [
-          {"internalType": "uint256", "name": "id", "type": "uint256"},
-          {"internalType": "address", "name": "requester", "type": "address"},
-          {"internalType": "address", "name": "worker", "type": "address"},
-          {"internalType": "string", "name": "title", "type": "string"},
-          {"internalType": "string", "name": "description", "type": "string"},
-          {"internalType": "uint256", "name": "budget", "type": "uint256"},
-          {"internalType": "uint256", "name": "deadline", "type": "uint256"},
-          {"internalType": "string", "name": "proofHash", "type": "string"},
-          {"internalType": "uint8", "name": "status", "type": "uint8"},
-          {"internalType": "bool", "name": "paid", "type": "bool"},
-          {"internalType": "uint256", "name": "createdAt", "type": "uint256"}
+          { "internalType": "uint256", "name": "id", "type": "uint256" },
+          { "internalType": "address", "name": "requester", "type": "address" },
+          { "internalType": "address", "name": "worker", "type": "address" },
+          { "internalType": "string", "name": "title", "type": "string" },
+          { "internalType": "string", "name": "description", "type": "string" },
+          { "internalType": "uint256", "name": "budget", "type": "uint256" },
+          { "internalType": "uint256", "name": "deadline", "type": "uint256" },
+          { "internalType": "string", "name": "proofHash", "type": "string" },
+          { "internalType": "uint8", "name": "status", "type": "uint8" },
+          { "internalType": "bool", "name": "paid", "type": "bool" },
+          { "internalType": "uint256", "name": "createdAt", "type": "uint256" }
         ],
         "internalType": "struct TaskEscrow.Task",
         "name": "",
@@ -141,12 +141,12 @@ export const TASK_ESCROW_ABI = [
   {
     "inputs": [],
     "name": "getTotalTasks",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [{"internalType": "uint256", "name": "taskId", "type": "uint256"}],
+    "inputs": [{ "internalType": "uint256", "name": "taskId", "type": "uint256" }],
     "name": "emergencyWithdraw",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -391,6 +391,62 @@ export async function getTotalTasks() {
   } catch (error) {
     console.error('Error fetching total tasks:', error);
     return 0;
+  }
+}
+
+/**
+ * Get multiple tasks in a single multicall
+ * @param {string[]|number[]} taskIds - Array of task IDs
+ * @returns {Promise<Object[]>} Array of task details
+ */
+export async function getMultipleBlockchainTasks(taskIds) {
+  try {
+    if (!TASK_ESCROW_ADDRESS || taskIds.length === 0) {
+      return [];
+    }
+
+    const publicClient = getPublicClient();
+
+    // Prepare multicall contracts
+    const contracts = taskIds.map(id => ({
+      address: TASK_ESCROW_ADDRESS,
+      abi: TASK_ESCROW_ABI,
+      functionName: 'getTask',
+      args: [BigInt(id)]
+    }));
+
+    // Execute multicall
+    const results = await publicClient.multicall({
+      contracts
+    });
+
+    // Parse results
+    const statusNames = ['OPEN', 'CLAIMED', 'SUBMITTED', 'VERIFIED', 'COMPLETED', 'DISPUTED'];
+
+    return results.map((result, index) => {
+      if (result.status !== 'success') {
+        console.warn(`Failed to fetch task ${taskIds[index]}:`, result.error);
+        return null;
+      }
+
+      const task = result.result;
+      return {
+        id: Number(task.id),
+        requester: task.requester,
+        worker: task.worker,
+        title: task.title,
+        description: task.description,
+        budget: formatEther(task.budget),
+        deadline: Number(task.deadline),
+        proofHash: task.proofHash,
+        status: statusNames[task.status] || 'UNKNOWN',
+        paid: task.paid,
+        createdAt: Number(task.createdAt)
+      };
+    }).filter(Boolean); // Remove failed fetches
+  } catch (error) {
+    console.error('Error fetching multiple tasks:', error);
+    throw error;
   }
 }
 

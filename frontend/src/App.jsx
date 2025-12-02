@@ -1,19 +1,30 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useAccount } from 'wagmi';
-import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard';
-import Deploy from './pages/Deploy';
-import Marketplace from './pages/Marketplace';
-import Tasks from './pages/Tasks';
-import Chat from './pages/Chat';
-import AgentChat from './pages/AgentChat';
-import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import useThemeStore from './store/theme';
 import { WagmiProvider, QueryClientProvider, queryClient, wagmiAdapter } from './config/wallet';
 import { initSyncManager, stopSyncManager } from './services/syncService';
 import { UserProvider } from './contexts/UserContext';
+
+// Lazy load pages
+const Landing = lazy(() => import('./pages/Landing'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Deploy = lazy(() => import('./pages/Deploy'));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Chat = lazy(() => import('./pages/Chat'));
+const AgentChat = lazy(() => import('./pages/AgentChat'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    </div>
+  );
+}
 
 /**
  * Sync Service Initializer
@@ -55,73 +66,77 @@ export default function App() {
   }, [initTheme]);
 
   return (
-    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <UserProvider>
-          <SyncServiceManager />
-          <Router>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/deploy"
-              element={
-                <ProtectedRoute>
-                  <Deploy />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/marketplace"
-              element={
-                <ProtectedRoute>
-                  <Marketplace />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/tasks"
-              element={
-                <ProtectedRoute>
-                  <Tasks />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/chat"
-              element={
-                <ProtectedRoute>
-                  <Chat />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/agent"
-              element={
-                <ProtectedRoute>
-                  <AgentChat />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Router>
-        </UserProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <ErrorBoundary>
+      <WagmiProvider config={wagmiAdapter.wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <UserProvider>
+            <SyncServiceManager />
+            <Router>
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/deploy"
+                    element={
+                      <ProtectedRoute>
+                        <Deploy />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/marketplace"
+                    element={
+                      <ProtectedRoute>
+                        <Marketplace />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/tasks"
+                    element={
+                      <ProtectedRoute>
+                        <Tasks />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/chat"
+                    element={
+                      <ProtectedRoute>
+                        <Chat />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/agent"
+                    element={
+                      <ProtectedRoute>
+                        <AgentChat />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/settings"
+                    element={
+                      <ProtectedRoute>
+                        <Settings />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Routes>
+              </Suspense>
+            </Router>
+          </UserProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </ErrorBoundary>
   );
 }
