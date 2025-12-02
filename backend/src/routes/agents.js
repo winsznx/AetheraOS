@@ -6,6 +6,7 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticate } from '../middleware/auth.js';
+import { emitAgentEvent, EventTypes } from '../utils/events.js';
 
 const router = express.Router();
 
@@ -97,6 +98,8 @@ router.post('/', authenticate, async (req, res) => {
       }
     });
 
+    emitAgentEvent(agent.id, EventTypes.AGENT_UPDATED, agent);
+
     res.status(201).json({
       success: true,
       agent
@@ -182,6 +185,12 @@ router.put('/:id', authenticate, async (req, res) => {
       }
     });
 
+    emitAgentEvent(agent.id, EventTypes.AGENT_UPDATED, agent);
+
+    if (status && status !== existing.status) {
+      emitAgentEvent(agent.id, EventTypes.AGENT_STATUS_CHANGED, { status });
+    }
+
     res.json({
       success: true,
       agent
@@ -217,6 +226,11 @@ router.post('/:id/call', async (req, res) => {
       }
     });
 
+    emitAgentEvent(agent.id, EventTypes.AGENT_CALLED, {
+      totalCalls: agent.totalCalls,
+      totalRevenue: agent.totalRevenue
+    });
+
     res.json({
       success: true,
       agent
@@ -250,6 +264,8 @@ router.delete('/:id', authenticate, async (req, res) => {
       where: { id },
       data: { status: 'inactive' }
     });
+
+    emitAgentEvent(agent.id, EventTypes.AGENT_STATUS_CHANGED, { status: 'inactive' });
 
     res.json({
       success: true,

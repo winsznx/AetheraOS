@@ -6,6 +6,7 @@
 import express from 'express';
 import prisma from '../db.js';
 import { authenticate } from '../middleware/auth.js';
+import { emitTaskEvent, EventTypes } from '../utils/events.js';
 
 const router = express.Router();
 
@@ -100,6 +101,9 @@ router.post('/', authenticate, async (req, res) => {
         status: 'OPEN'
       }
     });
+
+    // Emit real-time event
+    emitTaskEvent(task.id, EventTypes.TASK_CREATED, task);
 
     res.status(201).json({
       success: true,
@@ -220,6 +224,13 @@ router.put('/:id', authenticate, async (req, res) => {
       }
     });
 
+    // Emit real-time event
+    emitTaskEvent(task.id, EventTypes.TASK_UPDATED, task);
+
+    if (status === 'COMPLETED') {
+      emitTaskEvent(task.id, EventTypes.TASK_COMPLETED, task);
+    }
+
     res.json({
       success: true,
       task
@@ -291,6 +302,9 @@ router.post('/sync', async (req, res) => {
     // 3. Execute in transaction
     const results = await prisma.$transaction(operations);
 
+    // Note: We don't emit events here for bulk sync to avoid flooding, 
+    // but in a production app we might want to emit a 'SYNC_COMPLETED' event.
+
     res.json({
       success: true,
       synced: results.length,
@@ -326,6 +340,8 @@ router.delete('/:id', authenticate, async (req, res) => {
       where: { id },
       data: { status: 'CANCELLED' }
     });
+
+    emitTaskEvent(task.id, EventTypes.TASK_UPDATED, updated);
 
     res.json({
       success: true,

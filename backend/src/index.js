@@ -213,20 +213,58 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Socket.io connection handler
+io.on('connection', (socket) => {
+  console.log('🔌 New client connected:', socket.id);
+
+  socket.on('join_room', (roomId) => {
+    socket.join(roomId);
+    console.log(`Client ${socket.id} joined room ${roomId}`);
+  });
+
+  socket.on('leave_room', (roomId) => {
+    socket.leave(roomId);
+    console.log(`Client ${socket.id} left room ${roomId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+// Attach io to request for use in routes
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 // Start server
 console.log(`🚀 Attempting to start server on port ${PORT}...`);
 
 try {
-  const server = app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log('============================================');
     console.log(`✅ AetheraOS Backend API running on port ${PORT}`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+    console.log(`🔌 Socket.io: Enabled`);
     console.log(`🌐 Listening on http://0.0.0.0:${PORT}`);
     console.log('============================================');
   });
 
-  server.on('error', (error) => {
+  httpServer.on('error', (error) => {
     console.error('💥 SERVER ERROR:', error);
     process.exit(1);
   });
@@ -235,4 +273,4 @@ try {
   process.exit(1);
 }
 
-export { prisma };
+export { prisma, io };

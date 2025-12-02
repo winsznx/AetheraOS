@@ -69,7 +69,10 @@ router.get('/rooms/:id/messages', async (req, res) => {
     const messages = await prisma.chatMessage.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      take: parseInt(limit)
+      take: parseInt(limit),
+      include: {
+        user: true
+      }
     });
 
     res.json({ success: true, messages: messages.reverse() });
@@ -107,6 +110,9 @@ router.post('/rooms/:id/messages', async (req, res) => {
         roomId: id,
         messageType: messageType || 'text',
         metadata
+      },
+      include: {
+        user: true
       }
     });
 
@@ -115,6 +121,14 @@ router.post('/rooms/:id/messages', async (req, res) => {
       where: { id },
       data: { lastMessage: new Date() }
     });
+
+    // Emit real-time event
+    if (req.io) {
+      req.io.to(id).emit('message', {
+        type: 'MESSAGE',
+        data: message
+      });
+    }
 
     res.status(201).json({ success: true, message });
   } catch (error) {
