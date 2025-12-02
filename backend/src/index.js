@@ -47,6 +47,30 @@ const PORT = process.env.PORT || 3000;
 
 console.log(`✅ Express app created, PORT=${PORT}`);
 
+// Health check - BEFORE middleware to avoid CORS issues with health checkers
+app.get('/health', async (req, res) => {
+  try {
+    // Check DB connection
+    await prisma.$queryRaw`SELECT 1`;
+
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'connected'
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'disconnected',
+      error: error.message
+    });
+  }
+});
+
 // Middleware
 app.use(helmet()); // Security headers
 app.use(compression()); // Compress responses
@@ -119,30 +143,6 @@ const limiter = rateLimit(limiterConfig);
 app.use('/api/', limiter);
 
 console.log('✅ Middleware configured');
-
-// Health check
-app.get('/health', async (req, res) => {
-  try {
-    // Check DB connection
-    await prisma.$queryRaw`SELECT 1`;
-
-    res.status(200).json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      database: 'connected'
-    });
-  } catch (error) {
-    console.error('Health check failed:', error);
-    res.status(503).json({
-      status: 'error',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      database: 'disconnected',
-      error: error.message
-    });
-  }
-});
 
 // API Info
 app.get('/', (req, res) => {
