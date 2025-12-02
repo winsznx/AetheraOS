@@ -14,9 +14,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom']
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'web3-vendor': ['viem', 'wagmi', 'thirdweb'],
+          'ui-vendor': ['lucide-react', 'clsx', 'tailwind-merge']
         }
       }
-    }
+    },
+    chunkSizeWarningLimit: 1000
   }
 });
