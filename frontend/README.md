@@ -197,9 +197,6 @@ VITE_AGENT_URL=https://aetheraos-autonomous-agent.timjosh507.workers.dev
 
 # Edenlayer (optional)
 VITE_EDENLAYER_API_KEY=your_edenlayer_api_key
-
-# Prediction Market (optional)
-VITE_PREDICTION_AGENT_URL=https://prediction-market-agent.timjosh507.workers.dev
 ```
 
 ---

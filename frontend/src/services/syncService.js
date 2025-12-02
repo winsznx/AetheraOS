@@ -1,11 +1,11 @@
 /**
- * Sync Service - Auto-sync between Backend, Blockchain, and Edenlayer
- * Keeps all data sources in sync automatically
+ * Sync Service - Auto-sync between Backend and Blockchain
+ * Keeps task data in sync automatically
+ * Note: Agent discovery happens on-demand in Marketplace, not in auto-sync
  */
 
 import { getTasks, updateTask, syncTasks as apiSyncTasks } from '../lib/api';
-import { getTotalTasks, getTask as getBlockchainTask } from '../lib/blockchain';
-import { discoverAgents } from '../lib/edenlayer';
+import { getTotalTasks, getTask as getBlockchainTask, getMultipleBlockchainTasks } from '../lib/blockchain';
 
 /**
  * Sync Manager - Coordinates all sync operations
@@ -22,31 +22,77 @@ export class SyncManager {
   /**
    * Start auto-sync (runs every 30 seconds)
    */
-  startAutoSync(intervalMs = 30000) {
+  /**
+   * Start auto-sync (adaptive polling)
+   */
+  startAutoSync(intervalMs = 30000, maxInterval = 300000) {
     if (this.syncInterval) {
       console.warn('Auto-sync already running');
       return;
     }
 
-    console.log('Starting auto-sync...');
+    console.log('Starting adaptive auto-sync...');
+
+    let currentInterval = intervalMs;
+    let lastActivity = Date.now();
+    let syncTimeout = null;
+
+    // Track user activity
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    const onActivity = () => {
+      lastActivity = Date.now();
+      currentInterval = intervalMs; // Reset to fast polling on activity
+    };
+
+    activityEvents.forEach(event => {
+      window.addEventListener(event, onActivity, { passive: true });
+    });
+
+    // Adaptive polling function
+    const adaptiveSync = async () => {
+      // Don't sync if tab is hidden
+      if (document.hidden) {
+        syncTimeout = setTimeout(adaptiveSync, currentInterval);
+        return;
+      }
+
+      const timeSinceActivity = Date.now() - lastActivity;
+
+      // Slow down polling when user is idle
+      if (timeSinceActivity > 60000) {
+        currentInterval = Math.min(currentInterval * 1.5, maxInterval);
+      }
+
+      await this.syncAll();
+
+      syncTimeout = setTimeout(adaptiveSync, currentInterval);
+    };
 
     // Initial sync
-    this.syncAll();
+    adaptiveSync();
 
-    // Periodic sync
-    this.syncInterval = setInterval(() => {
-      this.syncAll();
-    }, intervalMs);
+    // Store cleanup function
+    this.cleanup = () => {
+      clearTimeout(syncTimeout);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, onActivity);
+      });
+    };
   }
 
   /**
    * Stop auto-sync
    */
   stopAutoSync() {
+    if (this.cleanup) {
+      this.cleanup();
+      this.cleanup = null;
+      console.log('Auto-sync stopped');
+    }
+    // Also clear interval if it was set by old code (backward compatibility)
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
-      console.log('Auto-sync stopped');
     }
   }
 
@@ -96,10 +142,8 @@ export class SyncManager {
     try {
       console.log('🔄 Starting full sync...');
 
-      await Promise.allSettled([
-        this.syncTasksFromBlockchain(),
-        this.syncAgentsFromEdenlayer()
-      ]);
+      // Sync tasks from blockchain
+      await this.syncTasksFromBlockchain();
 
       this.lastSyncTime = new Date();
       console.log('✅ Full sync completed');
@@ -128,32 +172,48 @@ export class SyncManager {
         return;
       }
 
+      // Filter tasks that have a blockchain ID
+      const taskIds = backendTasks.tasks
+        .filter(t => t.taskId)
+        .map(t => t.taskId);
+
+      if (taskIds.length === 0) {
+        console.log('No blockchain tasks to sync');
+        return;
+      }
+
+      // Batch fetch from blockchain
+      const blockchainTasks = await getMultipleBlockchainTasks(taskIds);
+
+      // Create a map for faster lookup
+      const bcTaskMap = new Map(blockchainTasks.map(t => [t.id, t]));
+
       const tasksToSync = [];
 
-      // Sync each task with blockchain
+      // Compare and prepare updates
       for (const task of backendTasks.tasks) {
         if (!task.taskId) continue;
 
-        try {
-          // Get task state from blockchain
-          const blockchainTask = await getBlockchainTask(task.taskId);
+        const blockchainTask = bcTaskMap.get(Number(task.taskId));
 
-          // Check if status changed
-          if (blockchainTask.status !== task.status ||
-              blockchainTask.worker !== task.worker ||
-              blockchainTask.proofHash !== task.proofHash) {
+        if (!blockchainTask) {
+          console.warn(`Task ${task.taskId} not found on blockchain`);
+          continue;
+        }
 
-            tasksToSync.push({
-              id: task.id,
-              status: blockchainTask.status,
-              worker: blockchainTask.worker,
-              proofHash: blockchainTask.proofHash,
-              budget: blockchainTask.budget,
-              paid: blockchainTask.paid
-            });
-          }
-        } catch (error) {
-          console.warn(`Failed to sync task ${task.taskId}:`, error.message);
+        // Check if status changed
+        if (blockchainTask.status !== task.status ||
+          blockchainTask.worker !== task.worker ||
+          blockchainTask.proofHash !== task.proofHash) {
+
+          tasksToSync.push({
+            id: task.id,
+            status: blockchainTask.status,
+            worker: blockchainTask.worker,
+            proofHash: blockchainTask.proofHash,
+            budget: blockchainTask.budget,
+            paid: blockchainTask.paid
+          });
         }
       }
 
@@ -174,34 +234,6 @@ export class SyncManager {
     } catch (error) {
       console.error('Error syncing tasks from blockchain:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Sync agents from Edenlayer
-   */
-  async syncAgentsFromEdenlayer() {
-    try {
-      console.log('🤖 Syncing agents from Edenlayer...');
-
-      // Get all agents from Edenlayer
-      const edenlayerAgents = await discoverAgents([]);
-
-      // Filter to user's agents (if ownership info available)
-      const userAgents = edenlayerAgents.filter(agent =>
-        agent.owner?.toLowerCase() === this.userAddress
-      );
-
-      if (userAgents.length > 0) {
-        console.log(`Found ${userAgents.length} user agents on Edenlayer`);
-        this.emit('agentsSynced', { count: userAgents.length, agents: userAgents });
-      }
-
-      console.log('✅ Agents synced from Edenlayer');
-
-    } catch (error) {
-      console.error('Error syncing agents from Edenlayer:', error);
-      // Don't throw - Edenlayer sync is optional
     }
   }
 
