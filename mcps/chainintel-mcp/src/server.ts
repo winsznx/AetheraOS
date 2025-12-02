@@ -15,6 +15,7 @@ import {
 import { initMoralis } from './apis/moralis';
 import { initHelius } from './apis/helius';
 import { initClaude } from './apis/claude';
+import { initPolymarket } from './apis/polymarket-advanced';
 
 // Import tool definitions - Wallet Intelligence
 import { analyzeWalletToolDef } from './tools/analyze-wallet';
@@ -41,13 +42,10 @@ import {
   getIPFSUrlToolDef
 } from './tools/ipfs-storage';
 
-// Import tool definitions - Prediction Markets
+// Import tool definitions - Prediction Markets (Advanced)
 import {
-  getMarketDataToolDef,
-  analyzeMarketToolDef,
-  getTrendingMarketsToolDef,
-  searchMarketsToolDef
-} from './tools/prediction-markets';
+  advancedPredictionMarketTools
+} from './tools/prediction-markets-advanced';
 
 // Tool registry - ALL-IN-ONE ChainIntel MCP
 const TOOLS = [
@@ -69,11 +67,8 @@ const TOOLS = [
   downloadProofToolDef,
   pinToIPFSToolDef,
   getIPFSUrlToolDef,
-  // Prediction Markets (4 tools)
-  getMarketDataToolDef,
-  analyzeMarketToolDef,
-  getTrendingMarketsToolDef,
-  searchMarketsToolDef
+  // Advanced Prediction Markets (8 tools)
+  ...advancedPredictionMarketTools
 ];
 
 /**
@@ -84,6 +79,7 @@ export async function createChainIntelServer(env: any) {
   await initMoralis(env.MORALIS_API_KEY);
   initHelius(env.HELIUS_API_KEY);
   initClaude(env.ANTHROPIC_API_KEY);
+  initPolymarket(env.POLYMARKET_API_KEY); // Optional - API is publicly accessible
 
   // Create MCP server
   const server = new Server(

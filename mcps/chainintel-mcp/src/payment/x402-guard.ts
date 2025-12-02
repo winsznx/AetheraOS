@@ -90,7 +90,7 @@ export async function verifyPayment(
       resourceUrl,
       payTo: platformWallet,
       network: network === 'mainnet' ? 'eip155:8453' : 'eip155:84532', // Base (8453) or Base Sepolia (84532)
-      price: `$${TOOL_PRICING[toolName]}`
+      price: TOOL_PRICING[toolName]
       // Thirdweb automatically handles facilitator and payment routing
     });
 
