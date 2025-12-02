@@ -134,10 +134,8 @@ export default function Chat() {
     if (!newMessage.trim() || !address) return;
 
     try {
-      // Send via WebSocket if connected
-      if (wsClientRef.current) {
-        wsClientRef.current.sendMessage(newMessage);
-      }
+      // Send via API (which triggers WebSocket event)
+      // wsClientRef.current.sendMessage(newMessage);
 
       // Also save to backend database for persistence
       if (selectedRoom) {
@@ -289,19 +287,21 @@ export default function Chat() {
                       key={idx}
                       className={cn(
                         'flex',
-                        msg.sender?.type === 'USER' ? 'justify-end' : 'justify-start'
+                        (msg.user?.address?.toLowerCase() === address?.toLowerCase() || msg.sender === address)
+                          ? 'justify-end'
+                          : 'justify-start'
                       )}
                     >
                       <div
                         className={cn(
                           'max-w-[70%] rounded-lg p-3',
-                          msg.sender?.type === 'USER'
+                          (msg.user?.address?.toLowerCase() === address?.toLowerCase() || msg.sender === address)
                             ? 'bg-brand-black dark:bg-white text-white dark:text-brand-black'
                             : 'bg-brand-light dark:bg-gray-800 text-brand-black dark:text-white'
                         )}
                       >
                         <div className="text-xs opacity-75 mb-1">
-                          {msg.sender?.name || 'Unknown'}
+                          {msg.user?.displayName || msg.sender?.name || 'Unknown'}
                         </div>
                         <div>{msg.content}</div>
                         <div className="text-xs opacity-50 mt-1">
