@@ -2,11 +2,71 @@
 pragma solidity ^0.8.20;
 
 /**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ */
+abstract contract ReentrancyGuard {
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    modifier nonReentrant() {
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+}
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ */
+abstract contract Ownable {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    constructor() {
+        _transferOwnership(msg.sender);
+    }
+
+    modifier onlyOwner() {
+        _checkOwner();
+        _;
+    }
+
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    function _checkOwner() internal view virtual {
+        require(owner() == msg.sender, "Ownable: caller is not the owner");
+    }
+
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        _transferOwnership(newOwner);
+    }
+
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+}
+
+/**
  * @title TaskEscrow
  * @notice Escrow contract for AetheraOS task marketplace
  * @dev Handles task creation, claiming, work submission, and payment distribution
  */
-contract TaskEscrow {
+contract TaskEscrow is ReentrancyGuard, Ownable {
     uint256 private taskCounter;
 
     enum TaskStatus { OPEN, CLAIMED, SUBMITTED, VERIFIED, COMPLETED, DISPUTED }
@@ -69,9 +129,24 @@ contract TaskEscrow {
         uint256 indexed taskId
     );
 
+    event PlatformWalletUpdated(
+        address indexed oldWallet,
+        address indexed newWallet
+    );
+
     constructor(address _platformWallet) {
         require(_platformWallet != address(0), "Invalid platform wallet");
         platformWallet = _platformWallet;
+    }
+
+    /**
+     * @notice Update the platform wallet address
+     * @param _newWallet New platform wallet address
+     */
+    function setPlatformWallet(address _newWallet) external onlyOwner {
+        require(_newWallet != address(0), "Invalid platform wallet");
+        emit PlatformWalletUpdated(platformWallet, _newWallet);
+        platformWallet = _newWallet;
     }
 
     /**
@@ -84,7 +159,7 @@ contract TaskEscrow {
         string memory title,
         string memory description,
         uint256 deadline
-    ) external payable returns (uint256) {
+    ) external payable nonReentrant returns (uint256) {
         require(msg.value > 0, "Budget must be greater than 0");
         require(deadline > block.timestamp, "Deadline must be in the future");
         require(bytes(title).length > 0, "Title cannot be empty");
@@ -178,7 +253,7 @@ contract TaskEscrow {
      * @notice Internal function to release payment
      * @param taskId ID of the task
      */
-    function _releasePayment(uint256 taskId) internal {
+    function _releasePayment(uint256 taskId) internal nonReentrant {
         Task storage task = tasks[taskId];
 
         require(task.status == TaskStatus.VERIFIED, "Task not verified");
@@ -221,7 +296,7 @@ contract TaskEscrow {
      * @notice Emergency withdraw for disputed tasks (only requester after deadline)
      * @param taskId ID of the task
      */
-    function emergencyWithdraw(uint256 taskId) external {
+    function emergencyWithdraw(uint256 taskId) external nonReentrant {
         Task storage task = tasks[taskId];
 
         require(task.id != 0, "Task does not exist");
