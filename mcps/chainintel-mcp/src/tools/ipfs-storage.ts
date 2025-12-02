@@ -82,16 +82,9 @@ async function uploadWorkProof(params: z.infer<typeof UploadWorkProofSchema>) {
   const PINATA_SECRET = process.env.PINATA_SECRET_KEY || '';
 
   // Check if Pinata is configured
+  // Check if Pinata is configured
   if (!PINATA_JWT && !PINATA_API_KEY) {
-    // Fallback to mock for demo
-    const mockHash = await generateMockHash(params.filename);
-    return {
-      success: true,
-      ipfsHash: mockHash,
-      url: `${PUBLIC_GATEWAY}${mockHash}`,
-      gateway: 'mock',
-      warning: 'Pinata not configured - using deterministic mock hash. Configure PINATA_JWT or PINATA_API_KEY in environment variables.'
-    };
+    throw new Error('Pinata not configured. Configure PINATA_JWT or PINATA_API_KEY in environment variables.');
   }
 
   try {
