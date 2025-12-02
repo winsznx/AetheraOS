@@ -4,10 +4,10 @@
  */
 
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../db.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 /**
  * GET /api/agents
@@ -53,7 +53,7 @@ router.get('/', async (req, res) => {
  * POST /api/agents
  * Create/register a new agent
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     const {
       name,
@@ -71,6 +71,14 @@ router.post('/', async (req, res) => {
       return res.status(400).json({
         success: false,
         error: 'Missing required fields: name, description, endpoint, owner'
+      });
+    }
+
+    // Ensure owner matches authenticated user
+    if (req.user.address !== owner.toLowerCase()) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized: Owner must match authenticated user'
       });
     }
 
@@ -138,7 +146,7 @@ router.get('/:id', async (req, res) => {
  * PUT /api/agents/:id
  * Update agent
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -151,6 +159,14 @@ router.put('/:id', async (req, res) => {
       priceAmount,
       status
     } = req.body;
+
+    // Check ownership
+    const existing = await prisma.agent.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Agent not found' });
+
+    if (existing.owner !== req.user.address) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
 
     const agent = await prisma.agent.update({
       where: { id },
@@ -182,6 +198,8 @@ router.put('/:id', async (req, res) => {
 /**
  * POST /api/agents/:id/call
  * Track agent call (increment stats)
+ * Note: This might be called by the system or another agent, so we might keep it open or use a different auth mechanism (API Key).
+ * For now, we'll leave it open but rate limited.
  */
 router.post('/:id/call', async (req, res) => {
   try {
@@ -216,9 +234,17 @@ router.post('/:id/call', async (req, res) => {
  * DELETE /api/agents/:id
  * Delete agent (soft delete - set status to inactive)
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Check ownership
+    const existing = await prisma.agent.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Agent not found' });
+
+    if (existing.owner !== req.user.address) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
 
     const agent = await prisma.agent.update({
       where: { id },

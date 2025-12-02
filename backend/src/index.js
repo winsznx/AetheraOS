@@ -24,7 +24,8 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
+import prisma from './db.js';
+import logger from './utils/logger.js';
 
 console.log('✅ Core modules imported');
 
@@ -42,7 +43,6 @@ dotenv.config();
 console.log('✅ Environment configured');
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
 console.log(`✅ Express app created, PORT=${PORT}`);
@@ -50,31 +50,98 @@ console.log(`✅ Express app created, PORT=${PORT}`);
 // Middleware
 app.use(helmet()); // Security headers
 app.use(compression()); // Compress responses
-app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  credentials: true
-}));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Rate limiting
-const limiter = rateLimit({
+// CORS Configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'];
+
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // In production, require origin header
+    if (!isDevelopment && !origin) {
+      return callback(new Error('Origin header required'));
+    }
+
+    // Development: allow localhost only
+    if (isDevelopment) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // Allow requests with no origin in dev (like curl)
+      if (!origin) return callback(null, true);
+    }
+
+    // Production: strict whitelist
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  maxAge: 86400, // 24 hours
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-wallet-address', 'x-signature', 'x-timestamp']
+}));
+
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+
+// Separate route for IPFS uploads (larger files)
+app.use('/api/ipfs/upload', express.json({ limit: '10mb' }));
+
+import RedisStore from 'rate-limit-redis';
+import redisClient from './utils/redis.js';
+
+// Rate limiting (uses Redis if available, otherwise in-memory)
+const limiterConfig = {
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+};
+
+// Add Redis store only if Redis is available
+if (redisClient) {
+  limiterConfig.store = new RedisStore({
+    sendCommand: (...args) => redisClient.sendCommand(args),
+  });
+  console.log('✅ Rate limiting with Redis (distributed)');
+} else {
+  console.log('⚠️  Rate limiting with in-memory store (single instance only)');
+}
+
+const limiter = rateLimit(limiterConfig);
 app.use('/api/', limiter);
 
 console.log('✅ Middleware configured');
 
 // Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    database: 'connected' // You might want to actually check DB connection here
-  });
+app.get('/health', async (req, res) => {
+  try {
+    // Check DB connection
+    await prisma.$queryRaw`SELECT 1`;
+
+    res.status(200).json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'connected'
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'disconnected',
+      error: error.message
+    });
+  }
 });
 
 // API Info
@@ -107,7 +174,13 @@ console.log('✅ All routes registered');
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  logger.error('Unhandled error:', {
+    error: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    requestId: req.id
+  });
 
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal server error';

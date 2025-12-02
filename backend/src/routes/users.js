@@ -4,11 +4,10 @@
  */
 
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
-import { verifyWalletSignature } from '../utils/auth.js';
+import prisma from '../db.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 /**
  * GET /api/users/:address
@@ -61,26 +60,40 @@ router.get('/:address', async (req, res) => {
   }
 });
 
+import { z } from 'zod';
+
+const UpdateUserSchema = z.object({
+  displayName: z.string().min(2).max(50).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  bio: z.string().max(500).optional(),
+  avatar: z.string().url().optional().or(z.literal('')),
+  theme: z.enum(['light', 'dark']).optional(),
+  notifications: z.boolean().optional(),
+  emailNotifications: z.boolean().optional()
+});
+
 /**
  * PUT /api/users/:address
  * Update user profile
  */
-router.put('/:address', async (req, res) => {
+router.put('/:address', authenticate, async (req, res) => {
   try {
     const { address } = req.params;
-    const {  displayName, email, bio, avatar, theme, notifications, emailNotifications } = req.body;
+
+    // Ensure user can only update their own profile
+    if (req.user.address !== address.toLowerCase()) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized to update this profile'
+      });
+    }
+
+    // Validate input
+    const validatedData = UpdateUserSchema.parse(req.body);
 
     const user = await prisma.user.update({
       where: { address: address.toLowerCase() },
-      data: {
-        ...(displayName && { displayName }),
-        ...(email && { email }),
-        ...(bio && { bio }),
-        ...(avatar && { avatar }),
-        ...(theme && { theme }),
-        ...(typeof notifications === 'boolean' && { notifications }),
-        ...(typeof emailNotifications === 'boolean' && { emailNotifications })
-      }
+      data: validatedData
     });
 
     res.json({
@@ -88,6 +101,14 @@ router.put('/:address', async (req, res) => {
       user
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: error.errors
+      });
+    }
+
     console.error('Error updating user:', error);
     res.status(500).json({
       success: false,
@@ -115,14 +136,17 @@ router.get('/:address/stats', async (req, res) => {
     const completedAsWorker = await prisma.task.findMany({
       where: {
         worker: address.toLowerCase(),
-        status: 'COMPLETED',
-        budget: { not: null }
+        status: 'COMPLETED'
       },
       select: { budget: true }
     });
 
     const totalEarnings = completedAsWorker.reduce((sum, task) => {
-      return sum + parseFloat(task.budget || '0');
+      // Filter out null/undefined budgets during calculation
+      if (task.budget) {
+        return sum + parseFloat(task.budget);
+      }
+      return sum;
     }, 0);
 
     res.json({

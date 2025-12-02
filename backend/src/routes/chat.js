@@ -4,10 +4,9 @@
  */
 
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../db.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /api/chat/rooms
 router.get('/rooms', async (req, res) => {
@@ -85,10 +84,26 @@ router.post('/rooms/:id/messages', async (req, res) => {
     const { id } = req.params;
     const { content, sender, messageType, metadata } = req.body;
 
+    const senderAddress = sender.toLowerCase();
+
+    // Ensure sender user exists in database
+    let user = await prisma.user.findUnique({
+      where: { address: senderAddress }
+    });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          address: senderAddress,
+          displayName: `${senderAddress.slice(0, 6)}...${senderAddress.slice(-4)}`
+        }
+      });
+    }
+
     const message = await prisma.chatMessage.create({
       data: {
         content,
-        sender: sender.toLowerCase(),
+        sender: senderAddress,
         roomId: id,
         messageType: messageType || 'text',
         metadata
