@@ -77,6 +77,8 @@ model Task {
   @@index([worker])
   @@index([status])
   @@index([taskId])
+  @@index([requester, status]) // Combined query optimization
+  @@index([createdAt]) // Ordering optimization
 }
 
 // Agent (registered on Edenlayer)
@@ -116,6 +118,7 @@ model Agent {
   @@index([owner])
   @@index([status])
   @@index([agentId])
+  @@index([owner, status]) // Combined query optimization
 }
 
 // Chat Room
