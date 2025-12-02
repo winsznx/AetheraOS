@@ -14,6 +14,14 @@ export interface Env {
   THIRDWEB_SECRET_KEY: string;
 }
 
+interface QueryRequest {
+  query: string;
+}
+
+interface ExecuteRequest {
+  plan: any;
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -43,8 +51,7 @@ export default {
       });
 
       // Create fetch wrapper with payment (server-side)
-      // Note: For server-side, we might handle payments differently
-      const fetchWithPayment = fetch; // Simplified for now
+      const fetchWithPayment = wrapFetchWithPayment(thirdwebClient);
 
       // Initialize agent
       const agent = new AutonomousAgent({
@@ -84,7 +91,7 @@ export default {
 
       // Process query endpoint
       if (path === '/query' && request.method === 'POST') {
-        const body: any = await request.json();
+        const body = await request.json() as QueryRequest;
         const { query } = body;
 
         if (!query) {
@@ -116,7 +123,7 @@ export default {
 
       // Plan query endpoint (no execution)
       if (path === '/plan' && request.method === 'POST') {
-        const body: any = await request.json();
+        const body = await request.json() as QueryRequest;
         const { query } = body;
 
         if (!query) {
@@ -148,7 +155,7 @@ export default {
 
       // Execute plan endpoint
       if (path === '/execute' && request.method === 'POST') {
-        const body: any = await request.json();
+        const body = await request.json() as ExecuteRequest;
         const { plan } = body;
 
         if (!plan) {
