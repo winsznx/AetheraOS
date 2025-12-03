@@ -184,7 +184,7 @@ export default function AgentChat() {
           isError: true
         }]);
 
-        setIsLoading(false);
+        setLoading(false);
         return;
       }
 
