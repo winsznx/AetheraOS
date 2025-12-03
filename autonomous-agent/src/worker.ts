@@ -4,8 +4,6 @@
  */
 
 import { AutonomousAgent } from './agent';
-import { wrapFetchWithPayment } from 'thirdweb/x402';
-import { createThirdwebClient } from 'thirdweb';
 
 export interface Env {
   ANTHROPIC_API_KEY: string;
@@ -45,19 +43,16 @@ export default {
     const path = url.pathname;
 
     try {
-      // Create Thirdweb client for x402 payments
-      const thirdwebClient = createThirdwebClient({
-        secretKey: env.THIRDWEB_SECRET_KEY
-      });
-
-      // Create fetch wrapper with payment (server-side)
-      const fetchWithPayment = wrapFetchWithPayment(thirdwebClient);
+      // Use native fetch - ChainIntel MCP handles payments internally
+      // Bind fetch to globalThis to avoid "Illegal invocation" error in Workers
+      const boundFetch = fetch.bind(globalThis);
 
       // Initialize agent
       const agent = new AutonomousAgent({
         anthropicApiKey: env.ANTHROPIC_API_KEY,
         chainIntelUrl: env.CHAININTEL_URL || 'https://chainintel-mcp.workers.dev',
-        fetchWithPayment
+        fetchWithPayment: boundFetch,
+        chainIntelApiKey: 'aetheraos-agent-internal' // API key for bypassing x402 payments
       });
 
       // Root endpoint - info
@@ -109,10 +104,11 @@ export default {
 
         const result = await agent.processQuery(query);
 
+        // Always return 200 - errors are in the response body with success: false
         return new Response(
           JSON.stringify(result, null, 2),
           {
-            status: result.success ? 200 : 500,
+            status: 200,
             headers: {
               'Content-Type': 'application/json',
               ...CORS_HEADERS

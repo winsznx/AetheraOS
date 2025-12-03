@@ -69,13 +69,24 @@ export async function verifyPayment(
   paymentData?: any;
 }> {
   try {
+    // Check for API key bypass (for autonomous agent)
+    const apiKey = request.headers.get('x-api-key');
+    const validApiKeys = ['aetheraos-agent-internal']; // Add more as needed
+
+    if (apiKey && validApiKeys.includes(apiKey)) {
+      return {
+        valid: true,
+        paymentData: { method: 'api-key', authenticated: true }
+      };
+    }
+
     // Get payment data from x-payment header
     const paymentHeader = request.headers.get('x-payment');
 
     if (!paymentHeader) {
       return {
         valid: false,
-        error: 'No payment provided. Include x-payment header with payment proof.'
+        error: 'No payment provided. Include x-payment header with payment proof or x-api-key for authorized agents.'
       };
     }
 

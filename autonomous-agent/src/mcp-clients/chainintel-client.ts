@@ -4,11 +4,10 @@
  * Supports ALL 27 tools dynamically via MCP protocol
  */
 
-import { wrapFetchWithPayment } from 'thirdweb/x402';
-
 export interface ChainIntelClient {
   baseUrl: string;
   fetch: typeof fetch;
+  apiKey?: string;
 }
 
 export interface MCPTool {
@@ -17,10 +16,11 @@ export interface MCPTool {
   inputSchema: any;
 }
 
-export function createChainIntelClient(baseUrl: string, fetchWithPayment: typeof fetch): ChainIntelClient {
+export function createChainIntelClient(baseUrl: string, fetchWithPayment: typeof fetch, apiKey?: string): ChainIntelClient {
   return {
     baseUrl,
-    fetch: fetchWithPayment
+    fetch: fetchWithPayment,
+    apiKey
   };
 }
 
@@ -28,9 +28,14 @@ export function createChainIntelClient(baseUrl: string, fetchWithPayment: typeof
  * List all available tools from ChainIntel MCP
  */
 export async function listTools(client: ChainIntelClient): Promise<MCPTool[]> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (client.apiKey) {
+    headers['x-api-key'] = client.apiKey;
+  }
+
   const response = await client.fetch(`${client.baseUrl}/mcp`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       jsonrpc: '2.0',
       method: 'tools/list',
@@ -57,9 +62,14 @@ export async function callTool(
   toolName: string,
   params: any
 ): Promise<any> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (client.apiKey) {
+    headers['x-api-key'] = client.apiKey;
+  }
+
   const response = await client.fetch(`${client.baseUrl}/mcp`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       jsonrpc: '2.0',
       method: 'tools/call',

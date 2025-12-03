@@ -170,11 +170,23 @@ export default function AgentChat() {
         body: JSON.stringify({ query: userQuery })
       });
 
-      if (!response.ok) {
-        throw new Error(`Agent error: ${response.statusText}`);
-      }
-
       const result = await response.json();
+
+      // Handle error responses (agent returns 200 with success: false)
+      if (!response.ok || !result.success) {
+        const errorMsg = result.report || result.error || response.statusText || 'Unknown error';
+
+        // Add error message to chat
+        setMessages(prev => [...prev, {
+          role: 'agent',
+          content: errorMsg,
+          timestamp: new Date().toISOString(),
+          isError: true
+        }]);
+
+        setIsLoading(false);
+        return;
+      }
 
       // Show planning if available
       if (result.plan) {

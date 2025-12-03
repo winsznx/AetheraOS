@@ -48,7 +48,7 @@ Please analyze:
 Be concise and focus on actionable insights for a trader deciding whether to copy this wallet's trades.`;
 
   const message = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-3-haiku-20240307',
     max_tokens: 1024,
     messages: [{
       role: 'user',
@@ -92,7 +92,7 @@ Respond in JSON format:
 }`;
 
   const message = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-3-haiku-20240307',
     max_tokens: 512,
     messages: [{
       role: 'user',
@@ -150,7 +150,7 @@ Respond in JSON:
 }`;
 
   const message = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-3-haiku-20240307',
     max_tokens: 512,
     messages: [{
       role: 'user',
@@ -205,7 +205,7 @@ Respond in JSON:
 }`;
 
   const message = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-3-haiku-20240307',
     max_tokens: 512,
     messages: [{
       role: 'user',
@@ -260,7 +260,7 @@ Respond in JSON:
 }`;
 
   const message = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-3-haiku-20240307',
     max_tokens: 512,
     messages: [{
       role: 'user',
@@ -309,7 +309,7 @@ Provide insights on:
 Be concise and actionable.`;
 
   const message = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-3-haiku-20240307',
     max_tokens: 1024,
     messages: [{
       role: 'user',
