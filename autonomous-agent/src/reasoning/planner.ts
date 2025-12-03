@@ -40,13 +40,13 @@ const AVAILABLE_TOOLS: MCPTool[] = [
     mcp: 'chainintel',
     tool: 'detect-whales',
     price: '0.005 ETH',
-    description: 'Identify whale wallets and track their movements'
+    description: 'Check if specific wallet addresses are whales (requires addresses array). Cannot search/find new whales - only validates provided addresses.'
   },
   {
     mcp: 'chainintel',
     tool: 'smart-money-tracker',
     price: '0.02 ETH',
-    description: 'Track wallets with proven alpha'
+    description: 'Track a specific wallet with proven trading history and alpha. Requires wallet address. Cannot discover new smart money - only analyzes provided address.'
   },
   {
     mcp: 'chainintel',
@@ -106,10 +106,12 @@ Respond in this exact JSON format (do NOT include markdown code blocks):
 CRITICAL RULES:
 - The "tool" field must be EXACTLY the tool name (e.g., "analyze-wallet"), NOT prefixed with mcp name
 - The "mcp" field must be the MCP name (e.g., "chainintel")
-- Only use tools that are actually needed
+- Only use tools that are actually needed and CAN fulfill the request
+- If the user asks to "find" or "discover" wallets but tools require specific addresses, return a plan that explains this limitation
+- All tools that analyze wallets REQUIRE a specific wallet address - they cannot search for or discover wallets
 - Optimize for cost (use cheaper tools when possible)
 - Consider dependencies (some tools need results from others)
-- Be specific with params based on the query
+- Be specific with params based on the query - never use placeholder values like "0x..."
 - Return ONLY valid JSON, no markdown formatting`;
 
   const message = await anthropic.messages.create({
