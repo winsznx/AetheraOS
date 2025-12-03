@@ -6,7 +6,7 @@
   "workers_dev": true,
 
   "build": {
-    "command": ""
+    "command": "cd autonomous-agent && npm install --production"
   },
 
   "vars": {
