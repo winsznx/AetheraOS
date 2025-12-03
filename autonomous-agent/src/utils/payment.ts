@@ -26,7 +26,7 @@ export function createPaymentFetch(secretKey: string): typeof fetch {
     }
 
     // Check if payment is required
-    const errorData = await initialResponse.json().catch(() => null);
+    const errorData: any = await initialResponse.json().catch(() => null);
 
     if (!errorData?.payment_required) {
       // Not a payment error, return original response

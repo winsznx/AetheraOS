@@ -76,12 +76,22 @@ export async function executePlan(
           totalCost += parseFloat(result.cost);
         }
       } catch (error: any) {
-        errors.push(`Step ${i} (${step.mcp}::${step.tool}): ${error.message}`);
+        // Clean error message
+        let errorMsg = error.message;
+
+        // Handle common MCP error patterns
+        if (errorMsg.includes('error code: 1042')) {
+          errorMsg = 'ChainIntel MCP configuration error: Missing required API keys (MORALIS_API_KEY or HELIUS_API_KEY). Please add these secrets to the ChainIntel Worker.';
+        } else if (errorMsg.includes('Unexpected token')) {
+          errorMsg = `MCP returned invalid response: ${errorMsg}`;
+        }
+
+        errors.push(`Step ${i} (${step.mcp}::${step.tool}): ${errorMsg}`);
         results.push({
           step: i,
           mcp: step.mcp,
           tool: step.tool,
-          error: error.message,
+          error: errorMsg,
           success: false
         });
 

@@ -77,7 +77,7 @@ export async function createExecutionPlan(
 User Query: "${userQuery}"
 
 Available Tools:
-${AVAILABLE_TOOLS.map(t => `- ${t.mcp}::${t.tool} (${t.price}): ${t.description}`).join('\n')}
+${AVAILABLE_TOOLS.map(t => `- ${t.tool} (MCP: ${t.mcp}, Price: ${t.price}): ${t.description}`).join('\n')}
 
 Create an execution plan that:
 1. Identifies the user's intent
@@ -86,28 +86,31 @@ Create an execution plan that:
 4. Specifies dependencies between steps
 5. Provides reasoning for each step
 
-Respond in this exact JSON format:
+Respond in this exact JSON format (do NOT include markdown code blocks):
 {
   "intent": "Brief description of what user wants",
   "steps": [
     {
-      "mcp": "mcp-name",
-      "tool": "tool-name",
-      "params": { /* tool parameters */ },
+      "mcp": "chainintel",
+      "tool": "analyze-wallet",
+      "params": {"address": "0x...", "chain": "base"},
       "reason": "Why this step is needed",
-      "dependsOn": [0, 1] // Optional: indices of steps this depends on
+      "dependsOn": []
     }
   ],
-  "totalCost": "0.XX ETH",
+  "totalCost": "0.01 ETH",
   "reasoning": "Overall reasoning for this plan",
   "expectedOutcome": "What the user will get"
 }
 
-Important:
+CRITICAL RULES:
+- The "tool" field must be EXACTLY the tool name (e.g., "analyze-wallet"), NOT prefixed with mcp name
+- The "mcp" field must be the MCP name (e.g., "chainintel")
 - Only use tools that are actually needed
 - Optimize for cost (use cheaper tools when possible)
 - Consider dependencies (some tools need results from others)
-- Be specific with params based on the query`;
+- Be specific with params based on the query
+- Return ONLY valid JSON, no markdown formatting`;
 
   const message = await anthropic.messages.create({
     model: 'claude-3-haiku-20240307',
@@ -122,10 +125,31 @@ Important:
   const responseText = textContent ? (textContent as any).text : '{}';
 
   try {
-    // Extract JSON from response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonStr = responseText;
+
+    // Remove markdown code blocks if present
+    const codeBlockMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (codeBlockMatch) {
+      jsonStr = codeBlockMatch[1].trim();
+    } else {
+      // Try to extract JSON object
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      jsonStr = jsonMatch ? jsonMatch[0] : responseText;
+    }
+
     const plan = JSON.parse(jsonStr);
+
+    // Clean up tool names: remove mcp prefix if Claude added it
+    if (plan.steps) {
+      plan.steps.forEach((step: ExecutionStep) => {
+        if (step.tool && step.tool.includes('::')) {
+          // Extract tool name after last ::
+          const parts = step.tool.split('::');
+          step.tool = parts[parts.length - 1];
+        }
+      });
+    }
 
     return plan as ExecutionPlan;
   } catch (error) {
