@@ -18,18 +18,18 @@ This isn't just "API integration" - it's **intelligent orchestration**. The agen
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ 1. PLANNING PHASE (Claude reasoning)           │
+│ 1. PLANNING PHASE (Claude reasoning)            │
 │                                                 │
 │ Agent analyzes intent:                          │
-│ → User wants to evaluate a wallet for copying  │
+│ → User wants to evaluate a wallet for copying   │
 │                                                 │
 │ Agent creates plan:                             │
-│ Step 1: analyze-wallet (0xABC) → Portfolio     │
-│ Step 2: risk-score (0xABC) → Risk level        │
-│ Step 3: smart-money-tracker (0xABC) → Alpha    │
-│ Step 4: trading-patterns (0xABC) → Strategy    │
+│ Step 1: analyze-wallet (0xABC) → Portfolio      │
+│ Step 2: risk-score (0xABC) → Risk level         │
+│ Step 3: smart-money-tracker (0xABC) → Alpha     │
+│ Step 4: trading-patterns (0xABC) → Strategy     │
 │                                                 │
-│ Total cost: 0.035 ETH                          │
+│ Total cost: 0.035 ETH                           │
 │ Estimated time: 12s                             │
 └─────────────────────────────────────────────────┘
 
