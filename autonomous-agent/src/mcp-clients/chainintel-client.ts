@@ -47,7 +47,7 @@ export async function listTools(client: ChainIntelClient): Promise<MCPTool[]> {
     throw new Error(`Failed to list tools: ${response.statusText}`);
   }
 
-  const data = await response.json();
+  const data: any = await response.json();
   return data.result?.tools || [];
 }
 
@@ -82,11 +82,11 @@ export async function callTool(
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error: any = await response.json();
     throw new Error(`ChainIntel ${toolName} failed: ${error.error || response.statusText}`);
   }
 
-  const data = await response.json();
+  const data: any = await response.json();
   return data.result;
 }
 
@@ -115,7 +115,7 @@ export async function analyzeWallet(
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error: any = await response.json();
     throw new Error(`ChainIntel analyze-wallet failed: ${error.error}`);
   }
 
@@ -140,7 +140,7 @@ export async function detectWhales(
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error: any = await response.json();
     throw new Error(`ChainIntel detect-whales failed: ${error.error}`);
   }
 
@@ -165,7 +165,7 @@ export async function trackSmartMoney(
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error: any = await response.json();
     throw new Error(`ChainIntel smart-money-tracker failed: ${error.error}`);
   }
 
@@ -189,7 +189,7 @@ export async function getRiskScore(
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error: any = await response.json();
     throw new Error(`ChainIntel risk-score failed: ${error.error}`);
   }
 
@@ -214,7 +214,7 @@ export async function getTradingPatterns(
   });
 
   if (!response.ok) {
-    const error = await response.json();
+    const error: any = await response.json();
     throw new Error(`ChainIntel trading-patterns failed: ${error.error}`);
   }
 
