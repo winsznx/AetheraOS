@@ -66,7 +66,7 @@ Respond in this exact JSON format:
 Be specific, actionable, and honest. If data is insufficient, say so.`;
 
   const message = await anthropic.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
+    model: 'claude-3-5-sonnet-20240620',
     max_tokens: 2048,
     messages: [{
       role: 'user',
