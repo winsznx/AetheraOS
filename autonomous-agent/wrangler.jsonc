@@ -5,6 +5,10 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
 
+  "build": {
+    "command": ""
+  },
+
   "vars": {
     "CHAININTEL_URL": "https://chainintel-mcp.timjosh507.workers.dev"
   }
