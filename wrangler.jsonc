@@ -1,0 +1,20 @@
+{
+  "name": "aetheraos-autonomous-agent",
+  "main": "autonomous-agent/src/worker.ts",
+  "compatibility_date": "2024-11-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+
+  "build": {
+    "command": ""
+  },
+
+  "vars": {
+    "CHAININTEL_URL": "https://chainintel-mcp.timjosh507.workers.dev"
+  }
+
+  // Secrets to be set with: npx wrangler secret put <NAME>
+  // - ANTHROPIC_API_KEY (for Claude AI reasoning)
+  // - THIRDWEB_CLIENT_ID (for x402 payments)
+  // - THIRDWEB_SECRET_KEY (for x402 payments)
+}
