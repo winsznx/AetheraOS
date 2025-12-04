@@ -16,6 +16,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
   const { address } = useAccount();
   const [status, setStatus] = useState('idle'); // idle, paying, confirming, success, error
   const [error, setError] = useState(null);
+  const [hasCalledApprove, setHasCalledApprove] = useState(false);
 
   const { sendTransaction, data: txHash, isPending: isSending } = useSendTransaction();
 
@@ -27,8 +28,9 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
   useEffect(() => {
     if (isSending) setStatus('paying');
     else if (isConfirming) setStatus('confirming');
-    else if (isConfirmed && txHash) {
+    else if (isConfirmed && txHash && !hasCalledApprove) {
       setStatus('success');
+      setHasCalledApprove(true);
       // Automatically call onApprove with payment proof
       setTimeout(() => {
         // Clean totalCost - remove " ETH" suffix if present
@@ -42,7 +44,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
         });
       }, 500);
     }
-  }, [isSending, isConfirming, isConfirmed, txHash, address, plan, onApprove]);
+  }, [isSending, isConfirming, isConfirmed, txHash, hasCalledApprove]);
 
   if (!isOpen || !plan) return null;
 
