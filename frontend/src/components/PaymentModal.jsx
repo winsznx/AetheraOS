@@ -212,7 +212,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
             <div className="flex items-center gap-2">
               <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
               <span className="text-xs text-blue-900 dark:text-blue-100">
-                {isPending ? 'Processing payment...' : 'Executing query...'}
+                Processing payment and executing query...
               </span>
             </div>
           </div>
@@ -237,7 +237,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                {isPending ? 'Paying...' : 'Executing...'}
+                Processing...
               </>
             ) : (
               <>
