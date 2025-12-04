@@ -4,6 +4,7 @@ import { useAccount } from 'wagmi';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import PaymentModal from '../components/PaymentModal';
 import { getChatRooms, createChatRoom, getRoomMessages, sendMessage } from '../lib/api';
 import useThemeStore from '../store/theme';
 import { cn } from '../utils/cn';
@@ -24,6 +25,9 @@ export default function AgentChat() {
   const [plan, setPlan] = useState(null);
   const [showPlan, setShowPlan] = useState(false);
   const [agentRoomId, setAgentRoomId] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState(null);
+  const [currentQuery, setCurrentQuery] = useState('');
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -154,6 +158,7 @@ export default function AgentChat() {
 
     setMessages(prev => [...prev, userMessage]);
     const userQuery = input;
+    setCurrentQuery(userQuery);
     setInput('');
     setLoading(true);
     setPlan(null);
@@ -163,8 +168,8 @@ export default function AgentChat() {
     await saveMessageToBackend('user', userQuery);
 
     try {
-      // Call the autonomous agent
-      const response = await fetch(`${AGENT_URL}/query`, {
+      // STEP 1: Get execution plan first (don't execute yet!)
+      const response = await fetch(`${AGENT_URL}/plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: userQuery })
@@ -172,11 +177,10 @@ export default function AgentChat() {
 
       const result = await response.json();
 
-      // Handle error responses (agent returns 200 with success: false)
-      if (!response.ok || !result.success) {
-        const errorMsg = result.report || result.error || response.statusText || 'Unknown error';
+      // Handle error responses
+      if (!response.ok || !result.plan) {
+        const errorMsg = result.error || response.statusText || 'Failed to create plan';
 
-        // Add error message to chat
         setMessages(prev => [...prev, {
           role: 'agent',
           content: errorMsg,
@@ -188,81 +192,27 @@ export default function AgentChat() {
         return;
       }
 
-      // Show planning if available
-      if (result.plan) {
-        setPlan(result.plan);
-        setShowPlan(true);
+      // STEP 2: Show plan in sidebar and payment modal
+      const planData = result.plan;
+      setPlan(planData);
+      setCurrentPlan(planData);
+      setShowPlan(true);
+      setLoading(false);
 
-        const planMessage = `I've created a plan to answer your question:\n\n${result.plan.reasoning}\n\nTotal cost: ${result.plan.totalCost}\nSteps: ${result.plan.steps.length}`;
+      // Show plan message to user
+      const planMessage = `I've created a plan to answer your question:\n\n${planData.reasoning}\n\n**Total cost: ${planData.totalCost} ETH**\n**Steps: ${planData.steps.length}**\n\nClick "Pay & Execute" to approve payment and run the analysis.`;
 
-        // Add planning message
-        setMessages(prev => [...prev, {
-          role: 'agent',
-          content: planMessage,
-          timestamp: new Date().toISOString(),
-          isPlan: true
-        }]);
+      setMessages(prev => [...prev, {
+        role: 'agent',
+        content: planMessage,
+        timestamp: new Date().toISOString(),
+        isPlan: true
+      }]);
 
-        // Save to backend
-        await saveMessageToBackend('agent', planMessage, { plan: result.plan });
-      }
+      await saveMessageToBackend('agent', planMessage, { plan: planData });
 
-      // Show conversational response if available
-      if (result.conversation && result.conversation.length > 0) {
-        result.conversation.forEach((line, idx) => {
-          // Skip the user message (it's already shown)
-          if (line.startsWith('**You:**')) return;
-
-          const agentResponse = line.replace('**Agent:** ', '');
-
-          setTimeout(async () => {
-            setMessages(prev => [...prev, {
-              role: 'agent',
-              content: agentResponse,
-              timestamp: new Date().toISOString(),
-              isConversation: true
-            }]);
-
-            // Save to backend
-            await saveMessageToBackend('agent', agentResponse, { conversation: true });
-          }, idx * 500); // Stagger messages for effect
-        });
-      } else if (result.synthesis) {
-        // Fallback to synthesis
-        const { summary, recommendation, keyFindings, actionItems } = result.synthesis;
-
-        let response = `**${recommendation}**\n\n${summary}\n\n`;
-
-        if (keyFindings && keyFindings.length > 0) {
-          response += `**Key Findings:**\n${keyFindings.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\n`;
-        }
-
-        if (actionItems && actionItems.length > 0) {
-          response += `**Recommended Actions:**\n${actionItems.map(a => `• ${a}`).join('\n')}`;
-        }
-
-        setMessages(prev => [...prev, {
-          role: 'agent',
-          content: response,
-          timestamp: new Date().toISOString(),
-          metadata: result.metadata
-        }]);
-
-        // Save to backend
-        await saveMessageToBackend('agent', response, result.metadata);
-      } else {
-        // Fallback if no conversation or synthesis
-        const fallbackResponse = JSON.stringify(result, null, 2);
-
-        setMessages(prev => [...prev, {
-          role: 'agent',
-          content: fallbackResponse,
-          timestamp: new Date().toISOString()
-        }]);
-
-        // Save to backend
-        await saveMessageToBackend('agent', fallbackResponse);
-      }
+      // STEP 3: Open payment modal
+      setShowPaymentModal(true);
 
     } catch (error) {
       console.error('Agent error:', error);
@@ -277,6 +227,73 @@ export default function AgentChat() {
 
       // Save error to backend too
       await saveMessageToBackend('agent', errorMessage, { error: true });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Handle payment approval - execute plan with user's payment proof
+   */
+  const handlePaymentApproved = async (paymentProof) => {
+    setShowPaymentModal(false);
+    setLoading(true);
+
+    try {
+      // Show payment confirmation message
+      setMessages(prev => [...prev, {
+        role: 'agent',
+        content: `✅ Payment confirmed! Transaction: ${paymentProof.transactionHash.slice(0, 10)}...\n\nExecuting your query now...`,
+        timestamp: new Date().toISOString()
+      }]);
+
+      // STEP 4: Execute plan with user's payment proof
+      const executeResponse = await fetch(`${AGENT_URL}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: currentPlan,
+          paymentProof: paymentProof
+        })
+      });
+
+      const result = await executeResponse.json();
+
+      if (!executeResponse.ok || !result.success) {
+        const errorMsg = result.report || result.error || 'Execution failed';
+
+        setMessages(prev => [...prev, {
+          role: 'agent',
+          content: errorMsg,
+          timestamp: new Date().toISOString(),
+          isError: true
+        }]);
+
+        setLoading(false);
+        return;
+      }
+
+      // Show results
+      if (result.report) {
+        setMessages(prev => [...prev, {
+          role: 'agent',
+          content: result.report,
+          timestamp: new Date().toISOString(),
+          metadata: result.metadata
+        }]);
+
+        await saveMessageToBackend('agent', result.report, result.metadata);
+      }
+
+    } catch (error) {
+      console.error('Execution error:', error);
+
+      setMessages(prev => [...prev, {
+        role: 'agent',
+        content: `Execution failed: ${error.message}`,
+        timestamp: new Date().toISOString(),
+        isError: true
+      }]);
     } finally {
       setLoading(false);
     }
@@ -505,6 +522,14 @@ export default function AgentChat() {
           </Card>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        plan={currentPlan}
+        onApprove={handlePaymentApproved}
+        onCancel={() => setShowPaymentModal(false)}
+        isOpen={showPaymentModal}
+      />
     </DashboardLayout>
   );
 }
