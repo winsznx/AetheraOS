@@ -1,0 +1,18 @@
+# Environment variables (contains private keys!)
+.env
+
+# Foundry artifacts
+out/
+cache/
+broadcast/
+
+# Dependencies
+node_modules/
+lib/
+
+# IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
