@@ -151,6 +151,34 @@ CRITICAL RULES:
           step.tool = parts[parts.length - 1];
         }
       });
+
+      // Normalize dependsOn: convert tool names to step indices
+      plan.steps.forEach((step: ExecutionStep, currentIdx: number) => {
+        if (step.dependsOn && Array.isArray(step.dependsOn)) {
+          step.dependsOn = step.dependsOn.map((dep: any) => {
+            // If dependency is already a number, keep it
+            if (typeof dep === 'number') {
+              return dep;
+            }
+
+            // If dependency is a string (tool name), find the step index
+            if (typeof dep === 'string') {
+              const depIndex = plan.steps.findIndex((s: ExecutionStep, idx: number) =>
+                idx < currentIdx && s.tool === dep
+              );
+
+              if (depIndex === -1) {
+                console.warn(`[Planner] Could not resolve dependency "${dep}" for step ${currentIdx} (${step.tool})`);
+                return dep; // Keep original if not found
+              }
+
+              return depIndex;
+            }
+
+            return dep;
+          });
+        }
+      });
     }
 
     return plan as ExecutionPlan;
