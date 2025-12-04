@@ -11,6 +11,7 @@ export interface Env {
   THIRDWEB_CLIENT_ID: string;
   THIRDWEB_SECRET_KEY: string;
   AGENT_PRIVATE_KEY?: string; // Optional: Private key for agent wallet to pay for MCPs
+  PLATFORM_WALLET: string; // Platform wallet to receive user payments
 }
 
 interface QueryRequest {
@@ -185,6 +186,37 @@ export default {
               }
             }
           );
+        }
+
+        // If paymentProof is provided, verify it using x402
+        if (paymentProof) {
+          const { verifyPaymentMiddleware } = await import('./payment/x402-verify');
+
+          // Calculate expected price from plan
+          const expectedPrice = plan.totalCost ?
+            plan.totalCost.replace(' ETH', '').trim() :
+            '0.001'; // Default minimum price
+
+          console.log('[Worker] Verifying user payment for plan execution...', {
+            expectedPrice,
+            platform: env.PLATFORM_WALLET
+          });
+
+          // Verify payment
+          const paymentError = await verifyPaymentMiddleware(
+            request,
+            `${url.origin}${path}`,
+            env.PLATFORM_WALLET,
+            env.THIRDWEB_SECRET_KEY,
+            expectedPrice
+          );
+
+          if (paymentError) {
+            console.error('[Worker] Payment verification failed');
+            return paymentError;
+          }
+
+          console.log('[Worker] Payment verified! Executing plan...');
         }
 
         // Execute with user payment proof if provided, otherwise use agent wallet

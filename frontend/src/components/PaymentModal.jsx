@@ -1,28 +1,32 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle, AlertCircle, DollarSign } from 'lucide-react';
-import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther } from 'viem';
-import { baseSepolia } from 'wagmi/chains';
+import { useActiveAccount } from 'thirdweb/react';
+import { encodePayment } from 'thirdweb/x402';
+import { createThirdwebClient } from 'thirdweb';
+import { sendTransaction, prepareTransaction } from 'thirdweb';
+import { baseSepolia } from 'thirdweb/chains';
 import Button from './Button';
 import Card from './Card';
 
 const PLATFORM_WALLET = import.meta.env.VITE_PLATFORM_WALLET || '0xA81514fBAE19DDEb16F4881c02c363c8E7c2B0d8';
+const THIRDWEB_CLIENT_ID = import.meta.env.VITE_THIRDWEB_CLIENT_ID;
+const AGENT_URL = import.meta.env.VITE_AGENT_URL;
+
+// Create Thirdweb client for x402 payments
+const client = createThirdwebClient({
+  clientId: THIRDWEB_CLIENT_ID
+});
 
 /**
  * Payment Approval Modal
  * Shows plan cost and requests user payment approval
  */
 export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
-  const { address } = useAccount();
+  const account = useActiveAccount();
   const [status, setStatus] = useState('idle'); // idle, paying, confirming, success, error
   const [error, setError] = useState(null);
   const [hasCalledApprove, setHasCalledApprove] = useState(false);
-
-  const { sendTransaction, data: txHash, isPending: isSending } = useSendTransaction();
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash: txHash,
-  });
+  const [txHash, setTxHash] = useState(null);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -30,35 +34,14 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
       setStatus('idle');
       setError(null);
       setHasCalledApprove(false);
+      setTxHash(null);
     }
   }, [isOpen]);
-
-  // Update status based on transaction state
-  useEffect(() => {
-    if (isSending) setStatus('paying');
-    else if (isConfirming) setStatus('confirming');
-    else if (isConfirmed && txHash && !hasCalledApprove) {
-      setStatus('success');
-      setHasCalledApprove(true);
-      // Automatically call onApprove with payment proof
-      setTimeout(() => {
-        // Clean totalCost - remove " ETH" suffix if present
-        const costValue = (plan?.totalCost || '0').replace(' ETH', '').trim();
-
-        onApprove({
-          transactionHash: txHash,
-          amount: parseEther(costValue).toString(),
-          chain: baseSepolia.id.toString(),
-          from: address
-        });
-      }, 500);
-    }
-  }, [isSending, isConfirming, isConfirmed, txHash, hasCalledApprove]);
 
   if (!isOpen || !plan) return null;
 
   const handlePayment = async () => {
-    if (!address) {
+    if (!account) {
       setError('Please connect your wallet first');
       return;
     }
@@ -69,13 +52,59 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
 
       // Clean totalCost - remove " ETH" suffix if present
       const costValue = plan.totalCost.replace(' ETH', '').trim();
+      const valueInWei = BigInt(Math.floor(parseFloat(costValue) * 1e18));
 
-      // Send payment transaction
-      await sendTransaction({
-        to: PLATFORM_WALLET,
-        value: parseEther(costValue),
-        chainId: baseSepolia.id
+      console.log('[PaymentModal] Preparing x402 payment:', {
+        amount: costValue,
+        valueInWei: valueInWei.toString(),
+        to: PLATFORM_WALLET
       });
+
+      // Prepare payment transaction
+      const transaction = prepareTransaction({
+        client,
+        chain: baseSepolia,
+        to: PLATFORM_WALLET,
+        value: valueInWei
+      });
+
+      // Encode x402 payment proof
+      const paymentData = await encodePayment({
+        client,
+        payTo: PLATFORM_WALLET,
+        price: costValue,
+        network: 'eip155:84532', // Base Sepolia
+        resourceUrl: `${AGENT_URL}/execute`,
+        metadata: {
+          planId: plan.id || Date.now(),
+          steps: plan.steps?.length || 0,
+          intent: plan.intent
+        }
+      });
+
+      console.log('[PaymentModal] Encoded x402 payment proof');
+
+      // Send transaction
+      setStatus('confirming');
+      const result = await sendTransaction({
+        transaction,
+        account
+      });
+
+      console.log('[PaymentModal] Payment sent:', result.transactionHash);
+      setTxHash(result.transactionHash);
+      setStatus('success');
+      setHasCalledApprove(true);
+
+      // Call onApprove with x402 payment proof
+      setTimeout(() => {
+        onApprove({
+          paymentData, // x402 payment proof from Thirdweb
+          transactionHash: result.transactionHash,
+          from: account.address
+        });
+      }, 500);
+
     } catch (err) {
       console.error('Payment failed:', err);
       setError(err.message || 'Payment failed');

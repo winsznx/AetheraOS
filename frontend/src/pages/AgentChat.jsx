@@ -247,13 +247,19 @@ export default function AgentChat() {
         timestamp: new Date().toISOString()
       }]);
 
-      // STEP 4: Execute plan with user's payment proof
+      // STEP 4: Execute plan with user's x402 payment proof
       const executeResponse = await fetch(`${AGENT_URL}/execute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-payment': paymentProof.paymentData // x402 payment proof from Thirdweb
+        },
         body: JSON.stringify({
           plan: currentPlan,
-          paymentProof: paymentProof
+          paymentProof: {
+            transactionHash: paymentProof.transactionHash,
+            from: paymentProof.from
+          }
         })
       });
 
