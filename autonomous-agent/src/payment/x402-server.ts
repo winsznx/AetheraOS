@@ -132,7 +132,7 @@ async function extractPaymentData(request: Request): Promise<string | null> {
     const contentType = request.headers.get('content-type');
 
     if (contentType?.includes('application/json')) {
-      const body = await request.clone().json();
+      const body = await request.clone().json() as any;
       return body.paymentData || body.payment || null;
     }
 
