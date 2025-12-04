@@ -13,7 +13,6 @@ export interface AgentConfig {
   anthropicApiKey: string;
   chainIntelUrl: string;
   fetchWithPayment: typeof fetch;
-  chainIntelApiKey?: string;
 }
 
 export interface AgentResponse {
@@ -42,8 +41,7 @@ export class AutonomousAgent {
     this.config = config;
     this.chainIntelClient = createChainIntelClient(
       config.chainIntelUrl,
-      config.fetchWithPayment,
-      config.chainIntelApiKey
+      config.fetchWithPayment
     );
   }
 

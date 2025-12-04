@@ -6,7 +6,7 @@
   "workers_dev": true,
 
   "build": {
-    "command": ""
+    "command": "npm run build"
   },
 
   "vars": {
@@ -17,4 +17,5 @@
   // - ANTHROPIC_API_KEY (for Claude AI reasoning)
   // - THIRDWEB_CLIENT_ID (for x402 payments)
   // - THIRDWEB_SECRET_KEY (for x402 payments)
+  // - AGENT_PRIVATE_KEY (optional: private key for agent wallet to pay for MCPs via x402)
 }

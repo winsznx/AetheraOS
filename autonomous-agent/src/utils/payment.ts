@@ -1,18 +1,43 @@
 /**
  * x402 Payment utilities for Cloudflare Workers
  * Server-side payment integration with Thirdweb
+ *
+ * Based on Thirdweb x402 protocol documentation:
+ * https://portal.thirdweb.com/x402
  */
 
 import { createThirdwebClient } from 'thirdweb';
-import { defineChain } from 'thirdweb/chains';
+import { baseSepolia } from 'thirdweb/chains';
+import { privateKeyToAccount } from 'thirdweb/wallets';
+import { sendTransaction, prepareTransaction } from 'thirdweb';
+import { parseEther } from 'viem';
 
 const BASE_SEPOLIA_CHAIN_ID = 84532;
 
+interface PaymentDetails {
+  amount: string;
+  recipient: string;
+  chain_id: number;
+  resource_id?: string;
+}
+
 /**
- * Create a fetch wrapper that adds x402 payment headers
+ * Create a fetch wrapper that handles x402 payments automatically
+ *
+ * @param clientId - Thirdweb client ID
+ * @param secretKey - Thirdweb secret key
+ * @param agentPrivateKey - Private key for agent wallet (to pay for resources)
+ * @returns Enhanced fetch function that handles payments
  */
-export function createPaymentFetch(secretKey: string): typeof fetch {
-  const client = createThirdwebClient({ secretKey });
+export function createPaymentFetch(
+  clientId: string,
+  secretKey: string,
+  agentPrivateKey?: string
+): typeof fetch {
+  const client = createThirdwebClient({
+    clientId,
+    secretKey
+  });
 
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
@@ -20,40 +45,109 @@ export function createPaymentFetch(secretKey: string): typeof fetch {
     // Make initial request to get payment details
     const initialResponse = await fetch(url, init);
 
-    // If no payment required, return response
+    // If successful, no payment needed
     if (initialResponse.ok) {
       return initialResponse;
     }
 
-    // Check if payment is required
+    // Check if payment is required (402 status)
+    if (initialResponse.status !== 402) {
+      // Not a payment error, return as-is
+      return initialResponse;
+    }
+
+    // Parse payment requirements
     const errorData: any = await initialResponse.json().catch(() => null);
 
-    if (!errorData?.payment_required) {
-      // Not a payment error, return original response
-      return new Response(JSON.stringify(errorData), {
-        status: initialResponse.status,
-        headers: initialResponse.headers
+    if (!errorData?.payment_required || !errorData?.payment_details) {
+      // Not a valid payment request
+      return new Response(JSON.stringify({
+        error: 'Invalid payment request',
+        details: errorData
+      }), {
+        status: 402,
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Payment required - for now, return descriptive error
-    // TODO: Implement actual payment signing with Thirdweb SDK
-    const paymentError = {
-      error: 'Payment required but not yet implemented',
-      details: errorData.payment_details,
-      message: 'x402 payment integration is in progress. Agent can plan queries but cannot execute paid MCP tools yet.'
-    };
+    const paymentDetails: PaymentDetails = errorData.payment_details;
 
-    return new Response(JSON.stringify(paymentError), {
-      status: 402,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    // If no agent private key, return payment required error
+    if (!agentPrivateKey) {
+      return new Response(JSON.stringify({
+        error: 'Payment required but no agent wallet configured',
+        payment_details: paymentDetails,
+        message: 'Set AGENT_PRIVATE_KEY in Cloudflare secrets to enable payments'
+      }), {
+        status: 402,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    try {
+      // Create wallet from private key
+      const agentWallet = privateKeyToAccount({
+        client,
+        privateKey: agentPrivateKey
+      });
+
+      console.log('[x402] Payment required:', {
+        amount: paymentDetails.amount,
+        recipient: paymentDetails.recipient,
+        chain: paymentDetails.chain_id
+      });
+
+      // Prepare payment transaction
+      const transaction = prepareTransaction({
+        client,
+        chain: baseSepolia,
+        to: paymentDetails.recipient as `0x${string}`,
+        value: BigInt(paymentDetails.amount),
+      });
+
+      // Send payment
+      console.log('[x402] Sending payment...');
+      const { transactionHash } = await sendTransaction({
+        transaction,
+        account: agentWallet
+      });
+
+      console.log('[x402] Payment sent:', transactionHash);
+
+      // Retry original request with payment proof
+      const retryHeaders = {
+        ...init?.headers,
+        'X-Payment-TxHash': transactionHash,
+        'X-Payment-Amount': paymentDetails.amount,
+        'X-Payment-Chain': paymentDetails.chain_id.toString(),
+        'X-Payment-Recipient': paymentDetails.recipient
+      };
+
+      const retryResponse = await fetch(url, {
+        ...init,
+        headers: retryHeaders
+      });
+
+      return retryResponse;
+
+    } catch (error: any) {
+      console.error('[x402] Payment failed:', error);
+
+      return new Response(JSON.stringify({
+        error: 'Payment transaction failed',
+        details: error.message,
+        payment_details: paymentDetails
+      }), {
+        status: 402,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   };
 }
 
 /**
  * Simple wrapper that passes through fetch without payment
- * Use this for now until full payment integration is ready
+ * Use this for testing or when payments are not needed
  */
 export function createPassthroughFetch(): typeof fetch {
   return fetch.bind(globalThis);
