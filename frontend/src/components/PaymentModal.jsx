@@ -31,9 +31,12 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
       setStatus('success');
       // Automatically call onApprove with payment proof
       setTimeout(() => {
+        // Clean totalCost - remove " ETH" suffix if present
+        const costValue = (plan?.totalCost || '0').replace(' ETH', '').trim();
+
         onApprove({
           transactionHash: txHash,
-          amount: parseEther(plan?.totalCost || '0').toString(),
+          amount: parseEther(costValue).toString(),
           chain: baseSepolia.id.toString(),
           from: address
         });
@@ -53,10 +56,13 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
       setError(null);
       setStatus('paying');
 
+      // Clean totalCost - remove " ETH" suffix if present
+      const costValue = plan.totalCost.replace(' ETH', '').trim();
+
       // Send payment transaction
       await sendTransaction({
         to: PLATFORM_WALLET,
-        value: parseEther(plan.totalCost),
+        value: parseEther(costValue),
         chainId: baseSepolia.id
       });
     } catch (err) {
@@ -120,7 +126,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Cost</span>
               <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {plan.totalCost} ETH
+                {plan.totalCost}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
@@ -211,7 +217,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
             {(status === 'idle' || status === 'error') && (
               <>
                 <DollarSign className="w-4 h-4 mr-2" />
-                Pay {plan.totalCost} ETH
+                Pay {plan.totalCost}
               </>
             )}
           </Button>
