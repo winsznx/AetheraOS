@@ -8,6 +8,7 @@ export interface ChainIntelClient {
   baseUrl: string;
   fetch: typeof fetch;
   apiKey?: string;
+  binding?: Fetcher; // Service binding for direct worker-to-worker communication
 }
 
 export interface MCPTool {
@@ -16,11 +17,17 @@ export interface MCPTool {
   inputSchema: any;
 }
 
-export function createChainIntelClient(baseUrl: string, fetchWithPayment: typeof fetch, apiKey?: string): ChainIntelClient {
+export function createChainIntelClient(
+  baseUrl: string,
+  fetchWithPayment: typeof fetch,
+  apiKey?: string,
+  binding?: Fetcher
+): ChainIntelClient {
   return {
     baseUrl,
     fetch: fetchWithPayment,
-    apiKey
+    apiKey,
+    binding
   };
 }
 
@@ -108,15 +115,71 @@ export async function analyzeWallet(
     includeCrossChain?: boolean;
   }
 ) {
-  const response = await client.fetch(`${client.baseUrl}/analyze-wallet`, {
+  // Use service binding if available, otherwise fall back to HTTP
+  if (client.binding) {
+    console.log('[ChainIntelClient] Using service binding to call analyze-wallet');
+    console.log('[ChainIntelClient] Params:', JSON.stringify(params));
+
+    const response = await client.binding.fetch('http://chainintel-mcp/analyze-wallet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+
+    console.log('[ChainIntelClient] Service binding response:', response.status, response.statusText);
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      let errorMsg = `HTTP ${response.status} ${response.statusText}`;
+
+      try {
+        if (contentType?.includes('application/json')) {
+          const error: any = await response.json();
+          errorMsg = error.error || error.message || errorMsg;
+        } else {
+          const text = await response.text();
+          errorMsg = `${errorMsg} - ${text.substring(0, 200)}`;
+        }
+      } catch (e) {
+        errorMsg = `${errorMsg} - Failed to parse error response`;
+      }
+
+      throw new Error(`ChainIntel analyze-wallet failed: ${errorMsg}. Params sent: ${JSON.stringify(params)}`);
+    }
+
+    return await response.json();
+  }
+
+  // Fallback to HTTP (legacy)
+  const url = `${client.baseUrl}/analyze-wallet`;
+  console.log('[ChainIntelClient] Using HTTP to call analyze-wallet:', url);
+
+  const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params)
   });
 
+  console.log('[ChainIntelClient] Response status:', response.status, response.statusText);
+
   if (!response.ok) {
-    const error: any = await response.json();
-    throw new Error(`ChainIntel analyze-wallet failed: ${error.error}`);
+    const contentType = response.headers.get('content-type');
+    let errorMsg = `HTTP ${response.status} ${response.statusText}`;
+
+    try {
+      if (contentType?.includes('application/json')) {
+        const error: any = await response.json();
+        errorMsg = error.error || error.message || errorMsg;
+      } else {
+        // Not JSON - probably HTML error page
+        const text = await response.text();
+        errorMsg = `${errorMsg} - ${text.substring(0, 200)}`;
+      }
+    } catch (e) {
+      errorMsg = `${errorMsg} - Failed to parse error response`;
+    }
+
+    throw new Error(`ChainIntel analyze-wallet failed: ${errorMsg}`);
   }
 
   return await response.json();
@@ -182,6 +245,24 @@ export async function getRiskScore(
     chain: 'base' | 'ethereum' | 'solana';
   }
 ) {
+  // Use service binding if available
+  if (client.binding) {
+    console.log('[ChainIntelClient] Using service binding to call risk-score');
+    const response = await client.binding.fetch('http://chainintel-mcp/risk-score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+      const error: any = await response.json();
+      throw new Error(`ChainIntel risk-score failed: ${error.error || error.message}`);
+    }
+
+    return await response.json();
+  }
+
+  // Fallback to HTTP
   const response = await client.fetch(`${client.baseUrl}/risk-score`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -207,6 +288,24 @@ export async function getTradingPatterns(
     minTrades?: number;
   }
 ) {
+  // Use service binding if available
+  if (client.binding) {
+    console.log('[ChainIntelClient] Using service binding to call trading-patterns');
+    const response = await client.binding.fetch('http://chainintel-mcp/trading-patterns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+      const error: any = await response.json();
+      throw new Error(`ChainIntel trading-patterns failed: ${error.error || error.message}`);
+    }
+
+    return await response.json();
+  }
+
+  // Fallback to HTTP
   const response = await client.fetch(`${client.baseUrl}/trading-patterns`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

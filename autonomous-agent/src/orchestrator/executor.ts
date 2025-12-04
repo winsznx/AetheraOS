@@ -41,18 +41,22 @@ export async function executePlan(
   let totalCost = 0;
 
   try {
+    console.log('[Executor] Starting execution of', plan.steps.length, 'steps');
+
     // Execute steps in order, respecting dependencies
     for (let i = 0; i < plan.steps.length; i++) {
       const step = plan.steps[i];
 
+      console.log(`[Executor] Executing step ${i}:`, step.mcp, '::', step.tool);
+
       // Wait for dependencies
       if (step.dependsOn && step.dependsOn.length > 0) {
-        const allDepsComplete = step.dependsOn.every(depIdx =>
-          context.results.has(depIdx)
-        );
+        const missingDeps = step.dependsOn.filter(depIdx => !context.results.has(depIdx));
 
-        if (!allDepsComplete) {
-          throw new Error(`Step ${i}: Dependencies not satisfied`);
+        if (missingDeps.length > 0) {
+          const errorMsg = `Step ${i} (${step.tool}): Dependencies not satisfied. Missing results from steps: ${missingDeps.join(', ')}. Completed steps: ${Array.from(context.results.keys()).join(', ') || 'none'}`;
+          console.error('[Executor]', errorMsg);
+          throw new Error(errorMsg);
         }
 
         // Enrich params with dependency results
@@ -61,7 +65,9 @@ export async function executePlan(
 
       // Execute step
       try {
+        console.log(`[Executor] Calling executeStep for step ${i}...`);
         const result = await executeStep(step, context);
+        console.log(`[Executor] Step ${i} completed successfully`);
         context.results.set(i, result);
         results.push({
           step: i,
@@ -76,15 +82,8 @@ export async function executePlan(
           totalCost += parseFloat(result.cost);
         }
       } catch (error: any) {
-        // Clean error message
-        let errorMsg = error.message;
-
-        // Handle common MCP error patterns
-        if (errorMsg.includes('error code: 1042')) {
-          errorMsg = 'ChainIntel MCP configuration error: Missing required API keys (MORALIS_API_KEY or HELIUS_API_KEY). Please add these secrets to the ChainIntel Worker.';
-        } else if (errorMsg.includes('Unexpected token')) {
-          errorMsg = `MCP returned invalid response: ${errorMsg}`;
-        }
+        // Use the actual error message without masking
+        const errorMsg = error.message;
 
         errors.push(`Step ${i} (${step.mcp}::${step.tool}): ${errorMsg}`);
         results.push({
@@ -149,9 +148,14 @@ async function executeChainIntelTool(
   params: any,
   client: ChainIntelClient
 ): Promise<any> {
+  console.log('[Executor] Calling ChainIntel tool:', tool, 'with params:', JSON.stringify(params));
+
   switch (tool) {
     case 'analyze-wallet':
-      return await ChainIntel.analyzeWallet(client, params);
+      console.log('[Executor] Calling ChainIntel.analyzeWallet...');
+      const result = await ChainIntel.analyzeWallet(client, params);
+      console.log('[Executor] ChainIntel.analyzeWallet returned:', typeof result);
+      return result;
 
     case 'detect-whales':
       return await ChainIntel.detectWhales(client, params);
@@ -185,6 +189,30 @@ function enrichParams(
     step: depIdx,
     result: results.get(depIdx)
   }));
+
+  // Auto-populate common fields from the first dependency if not already set
+  if (dependencies.length > 0) {
+    const firstDep = results.get(dependencies[0]);
+
+    if (firstDep) {
+      // Extract wallet info from the result
+      const walletInfo = firstDep.wallet || firstDep.result?.wallet;
+
+      if (walletInfo) {
+        // Populate address if missing
+        if (!enriched.address && walletInfo.address) {
+          enriched.address = walletInfo.address;
+          console.log('[Executor] Auto-populated address from dependency:', walletInfo.address);
+        }
+
+        // Populate chain if missing
+        if (!enriched.chain && walletInfo.chain) {
+          enriched.chain = walletInfo.chain;
+          console.log('[Executor] Auto-populated chain from dependency:', walletInfo.chain);
+        }
+      }
+    }
+  }
 
   return enriched;
 }
