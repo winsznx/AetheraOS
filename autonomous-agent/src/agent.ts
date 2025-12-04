@@ -13,6 +13,7 @@ export interface AgentConfig {
   anthropicApiKey: string;
   chainIntelUrl: string;
   fetchWithPayment: typeof fetch;
+  chainIntelBinding?: Fetcher; // Service binding for direct worker-to-worker communication
 }
 
 export interface PaymentProof {
@@ -48,7 +49,9 @@ export class AutonomousAgent {
     this.config = config;
     this.chainIntelClient = createChainIntelClient(
       config.chainIntelUrl,
-      config.fetchWithPayment
+      config.fetchWithPayment,
+      undefined, // apiKey
+      config.chainIntelBinding // Service binding for direct worker-to-worker communication
     );
   }
 
@@ -353,7 +356,9 @@ export class AutonomousAgent {
     const startTime = Date.now();
 
     try {
+      console.log('[Agent] Starting plan execution...', { steps: plan.steps?.length });
       const executionResult = await executePlan(plan, this.chainIntelClient);
+      console.log('[Agent] Plan execution completed:', { success: executionResult.success });
 
       if (!executionResult.success) {
         throw new Error(`Execution failed: ${executionResult.errors?.join(', ')}`);

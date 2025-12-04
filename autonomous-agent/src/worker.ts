@@ -12,6 +12,7 @@ export interface Env {
   THIRDWEB_SECRET_KEY: string;
   AGENT_PRIVATE_KEY?: string; // Optional: Private key for agent wallet to pay for MCPs
   SERVER_WALLET: string; // Server wallet to receive user payments (x402)
+  CHAININTEL: Fetcher; // Service binding to ChainIntel worker
 }
 
 interface QueryRequest {
@@ -51,29 +52,21 @@ export default {
     const path = url.pathname;
 
     try {
-      // Import payment utilities
-      const { createPaymentFetch, createPassthroughFetch } = await import('./utils/payment');
+      // TEMPORARY FIX: Use passthrough fetch until Thirdweb x402 works in Workers
+      // Thirdweb's wrapFetchWithPayment doesn't work in Cloudflare Workers (returns 404)
+      // User has already paid the agent, so agent can call MCPs for free
+      const { createPassthroughFetch } = await import('./utils/payment');
+      const fetchWithPayment = createPassthroughFetch();
 
-      // Create payment-enabled fetch or passthrough
-      // If AGENT_PRIVATE_KEY is set, enable x402 payments
-      // Otherwise, use passthrough (for testing or free endpoints)
-      const fetchWithPayment = env.AGENT_PRIVATE_KEY
-        ? createPaymentFetch(
-            env.THIRDWEB_CLIENT_ID,
-            env.THIRDWEB_SECRET_KEY,
-            env.AGENT_PRIVATE_KEY
-          )
-        : createPassthroughFetch();
+      console.log('[Worker] Using passthrough fetch (user already paid agent)');
 
-      console.log('[Worker] Payment mode:', env.AGENT_PRIVATE_KEY ? 'x402 enabled' : 'passthrough (no payments)');
-
-      // Initialize agent WITHOUT API key bypass
-      // Agent will use x402 payments to access ChainIntel MCP
+      // Initialize agent with service binding for direct worker-to-worker communication
+      // User payment to agent covers all MCP costs
       const agent = new AutonomousAgent({
         anthropicApiKey: env.ANTHROPIC_API_KEY,
         chainIntelUrl: env.CHAININTEL_URL || 'https://chainintel-mcp.workers.dev',
-        fetchWithPayment
-        // ❌ REMOVED: chainIntelApiKey bypass - now uses x402 payments!
+        fetchWithPayment,
+        chainIntelBinding: env.CHAININTEL // Use service binding for reliable worker-to-worker calls
       });
 
       // Root endpoint - info
