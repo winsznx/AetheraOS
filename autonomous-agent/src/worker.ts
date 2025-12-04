@@ -10,6 +10,7 @@ export interface Env {
   CHAININTEL_URL: string;
   THIRDWEB_CLIENT_ID: string;
   THIRDWEB_SECRET_KEY: string;
+  AGENT_PRIVATE_KEY?: string; // Optional: Private key for agent wallet to pay for MCPs
 }
 
 interface QueryRequest {
@@ -43,16 +44,29 @@ export default {
     const path = url.pathname;
 
     try {
-      // Use native fetch - ChainIntel MCP handles payments internally
-      // Bind fetch to globalThis to avoid "Illegal invocation" error in Workers
-      const boundFetch = fetch.bind(globalThis);
+      // Import payment utilities
+      const { createPaymentFetch, createPassthroughFetch } = await import('./utils/payment');
 
-      // Initialize agent
+      // Create payment-enabled fetch or passthrough
+      // If AGENT_PRIVATE_KEY is set, enable x402 payments
+      // Otherwise, use passthrough (for testing or free endpoints)
+      const fetchWithPayment = env.AGENT_PRIVATE_KEY
+        ? createPaymentFetch(
+            env.THIRDWEB_CLIENT_ID,
+            env.THIRDWEB_SECRET_KEY,
+            env.AGENT_PRIVATE_KEY
+          )
+        : createPassthroughFetch();
+
+      console.log('[Worker] Payment mode:', env.AGENT_PRIVATE_KEY ? 'x402 enabled' : 'passthrough (no payments)');
+
+      // Initialize agent WITHOUT API key bypass
+      // Agent will use x402 payments to access ChainIntel MCP
       const agent = new AutonomousAgent({
         anthropicApiKey: env.ANTHROPIC_API_KEY,
         chainIntelUrl: env.CHAININTEL_URL || 'https://chainintel-mcp.workers.dev',
-        fetchWithPayment: boundFetch,
-        chainIntelApiKey: 'aetheraos-agent-internal' // API key for bypassing x402 payments
+        fetchWithPayment
+        // ❌ REMOVED: chainIntelApiKey bypass - now uses x402 payments!
       });
 
       // Root endpoint - info

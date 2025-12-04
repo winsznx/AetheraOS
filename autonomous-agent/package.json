@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc && wrangler deploy",
-    "deploy": "wrangler deploy",
+    "build": "tsc",
+    "deploy": "npm run build && wrangler deploy",
     "test": "vitest"
   },
   "keywords": ["ai-agent", "mcp", "orchestration", "autonomous", "web3"],
