@@ -57,5 +57,6 @@ export function createPaymentFetch(
  * Use this for testing or when payments are not needed
  */
 export function createPassthroughFetch(): typeof fetch {
-  return fetch.bind(globalThis);
+  // Return the global fetch directly - do NOT bind
+  return fetch;
 }
