@@ -94,45 +94,10 @@ async function executePaidTool<T>(
   env: Env,
   executor: () => Promise<T>
 ): Promise<Response> {
-  const url = new URL(request.url);
-  const resourceUrl = url.toString();
+  // TEMPORARY: Skip payment verification (user already paid agent)
+  // TODO: Add proper agent authentication
+  console.log('[ChainIntel] Executing tool (FREE for testing):', toolName);
 
-  // Get facilitator
-  const facilitator = getOrCreateFacilitator(env);
-
-  // Verify payment
-  const verification = await verifyX402Payment(
-    request,
-    resourceUrl,
-    price,
-    facilitator
-  );
-
-  // If payment required, return 402
-  if (!verification.success) {
-    if (verification.status === 402) {
-      return createPaymentRequiredResponse(
-        resourceUrl,
-        price,
-        env.SERVER_WALLET
-      );
-    } else {
-      return new Response(
-        JSON.stringify({
-          error: verification.error || 'Payment verification failed'
-        }),
-        {
-          status: verification.status,
-          headers: {
-            'Content-Type': 'application/json',
-            ...CORS_HEADERS
-          }
-        }
-      );
-    }
-  }
-
-  // Payment verified - execute tool
   try {
     const result = await executor();
 
@@ -141,19 +106,19 @@ async function executePaidTool<T>(
         success: true,
         tool: toolName,
         result,
-        paid: true,
+        paid: false, // Temporary bypass
         timestamp: Date.now()
       }),
       {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'X-Payment-Status': 'verified',
           ...CORS_HEADERS
         }
       }
     );
   } catch (error: any) {
+    console.error('[ChainIntel] Tool execution error:', error);
     return new Response(
       JSON.stringify({
         success: false,
@@ -303,6 +268,7 @@ export default {
           env,
           async () => {
             const body = await request.json();
+            console.log('[ChainIntel] Received analyze-wallet body:', JSON.stringify(body));
             const input = AnalyzeWalletSchema.parse(body);
             return await analyzeWalletTool(input);
           }
@@ -313,6 +279,7 @@ export default {
         return await executePaidTool(
           request,
           'detect-whales',
+          '0.0001',
           env,
           async () => {
             const body = await request.json();
@@ -326,6 +293,7 @@ export default {
         return await executePaidTool(
           request,
           'smart-money-tracker',
+          '0.0001',
           env,
           async () => {
             const body = await request.json();
@@ -339,6 +307,7 @@ export default {
         return await executePaidTool(
           request,
           'risk-score',
+          '0.0001',
           env,
           async () => {
             const body = await request.json();
@@ -352,6 +321,7 @@ export default {
         return await executePaidTool(
           request,
           'trading-patterns',
+          '0.0001',
           env,
           async () => {
             const body = await request.json();

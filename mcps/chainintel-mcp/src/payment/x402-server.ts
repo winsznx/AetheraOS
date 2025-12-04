@@ -8,7 +8,7 @@
 import { settlePayment } from 'thirdweb/x402';
 import { facilitator } from 'thirdweb/x402';
 import { createThirdwebClient } from 'thirdweb';
-import { arbitrumSepolia } from 'thirdweb/chains';
+import { baseSepolia } from 'thirdweb/chains';
 
 /**
  * Create Thirdweb facilitator with server wallet
