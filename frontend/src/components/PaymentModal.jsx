@@ -24,6 +24,15 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
     hash: txHash,
   });
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setStatus('idle');
+      setError(null);
+      setHasCalledApprove(false);
+    }
+  }, [isOpen]);
+
   // Update status based on transaction state
   useEffect(() => {
     if (isSending) setStatus('paying');
