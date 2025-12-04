@@ -1,28 +1,19 @@
 /**
  * x402 Payment Verification for Autonomous Agent
- * Official Thirdweb x402 server-side implementation
+ * Custom on-chain transaction verification (simplified approach)
  *
- * Based on: https://portal.thirdweb.com/x402/server
+ * Since Thirdweb's settlePayment requires their SDK-generated proofs,
+ * we verify transactions on-chain directly using public RPC.
  */
 
-import { settlePayment } from 'thirdweb/x402';
-import { facilitator } from 'thirdweb/x402';
-import { createThirdwebClient } from 'thirdweb';
-import { arbitrumSepolia } from 'thirdweb/chains';
+import { createPublicClient, http, parseEther, formatEther } from 'viem';
+import { baseSepolia } from 'viem/chains';
 
-/**
- * Create Thirdweb facilitator with server wallet
- */
-export function createX402Facilitator(secretKey: string, serverWalletAddress: string) {
-  const client = createThirdwebClient({
-    secretKey
-  });
-
-  return facilitator({
-    client,
-    serverWalletAddress
-  });
-}
+// Create public client for on-chain verification
+const publicClient = createPublicClient({
+  chain: baseSepolia,
+  transport: http()
+});
 
 /**
  * Return 402 Payment Required response
@@ -58,13 +49,13 @@ export function createPaymentRequiredResponse(
 }
 
 /**
- * Verify and settle x402 payment
+ * Verify x402 payment by checking transaction on-chain
  */
 export async function verifyX402Payment(
   request: Request,
   resourceUrl: string,
   price: string,
-  thirdwebFacilitator: ReturnType<typeof facilitator>
+  serverWallet: string
 ): Promise<{
   success: boolean;
   status: number;
@@ -83,37 +74,96 @@ export async function verifyX402Payment(
       };
     }
 
-    console.log('[x402-server] Settling payment...', {
+    console.log('[x402-server] Verifying payment on-chain...', {
       resourceUrl,
       price,
-      network: 'eip155:84532'
+      network: 'baseSepolia'
     });
 
-    // Settle payment using Thirdweb x402
-    const result = await settlePayment({
-      resourceUrl,
-      method: 'POST',
-      paymentData,
-      network: 'eip155:84532', // Base Sepolia
-      price,
-      facilitator: thirdwebFacilitator
-    });
-
-    console.log('[x402-server] Settlement result:', result.status);
-
-    if (result.status === 200) {
-      return {
-        success: true,
-        status: 200,
-        payment: result
-      };
-    } else {
+    // Parse payment proof
+    let paymentProof;
+    try {
+      paymentProof = JSON.parse(paymentData);
+    } catch {
       return {
         success: false,
-        status: result.status || 402,
-        error: result.error || 'Payment settlement failed'
+        status: 402,
+        error: 'Invalid payment proof format'
       };
     }
+
+    const txHash = paymentProof.transactionHash;
+    if (!txHash || !txHash.startsWith('0x')) {
+      return {
+        success: false,
+        status: 402,
+        error: 'Invalid transaction hash'
+      };
+    }
+
+    // Get transaction receipt from blockchain
+    console.log('[x402-server] Fetching transaction:', txHash);
+
+    const tx = await publicClient.getTransaction({ hash: txHash as `0x${string}` });
+    const receipt = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+
+    if (!tx || !receipt) {
+      return {
+        success: false,
+        status: 402,
+        error: 'Transaction not found on-chain'
+      };
+    }
+
+    // Verify transaction was successful
+    if (receipt.status !== 'success') {
+      return {
+        success: false,
+        status: 402,
+        error: 'Transaction failed on-chain'
+      };
+    }
+
+    // Verify recipient
+    if (tx.to?.toLowerCase() !== serverWallet.toLowerCase()) {
+      return {
+        success: false,
+        status: 402,
+        error: `Payment sent to wrong address: ${tx.to} (expected: ${serverWallet})`
+      };
+    }
+
+    // Verify amount (with small tolerance for gas/rounding)
+    const expectedAmount = parseEther(price);
+    const actualAmount = tx.value;
+    const tolerance = parseEther('0.00001'); // 0.00001 ETH tolerance
+
+    if (actualAmount < (expectedAmount - tolerance)) {
+      return {
+        success: false,
+        status: 402,
+        error: `Insufficient payment: ${formatEther(actualAmount)} ETH (expected: ${price} ETH)`
+      };
+    }
+
+    console.log('[x402-server] Payment verified successfully!', {
+      txHash,
+      from: tx.from,
+      to: tx.to,
+      value: formatEther(actualAmount)
+    });
+
+    return {
+      success: true,
+      status: 200,
+      payment: {
+        transactionHash: txHash,
+        from: tx.from,
+        to: tx.to,
+        value: formatEther(actualAmount),
+        blockNumber: receipt.blockNumber
+      }
+    };
   } catch (error: any) {
     console.error('[x402-server] Payment verification error:', error);
     return {

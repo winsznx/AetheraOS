@@ -189,30 +189,24 @@ export default {
         }
 
         // Import x402 server utilities
-        const { createX402Facilitator, verifyX402Payment, createPaymentRequiredResponse } = await import('./payment/x402-server');
+        const { verifyX402Payment, createPaymentRequiredResponse } = await import('./payment/x402-server');
 
         // Calculate expected price from plan
         const expectedPrice = plan.totalCost ?
           plan.totalCost.replace(' ETH', '').trim() :
           '0.001'; // Default minimum price
 
-        // Create facilitator with server wallet
-        const thirdwebFacilitator = createX402Facilitator(
-          env.THIRDWEB_SECRET_KEY,
-          env.SERVER_WALLET
-        );
-
         console.log('[Worker] Verifying x402 payment...', {
           expectedPrice,
           serverWallet: env.SERVER_WALLET
         });
 
-        // Verify x402 payment
+        // Verify x402 payment (on-chain verification)
         const verification = await verifyX402Payment(
           request,
           `${url.origin}${path}`,
           expectedPrice,
-          thirdwebFacilitator
+          env.SERVER_WALLET
         );
 
         // If payment verification failed, return 402
