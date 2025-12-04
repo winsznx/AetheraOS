@@ -10,18 +10,24 @@
     "deploy": "npm run build && wrangler deploy",
     "test": "vitest"
   },
-  "keywords": ["ai-agent", "mcp", "orchestration", "autonomous", "web3"],
+  "keywords": [
+    "ai-agent",
+    "mcp",
+    "orchestration",
+    "autonomous",
+    "web3"
+  ],
   "author": "AetheraOS",
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",
     "@modelcontextprotocol/sdk": "^1.0.4",
     "thirdweb": "^5.72.0",
-    "viem": "^2.21.50",
+    "viem": "^2.41.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241127.0",
+    "@cloudflare/workers-types": "^4.20251202.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.5",
