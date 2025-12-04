@@ -29,35 +29,35 @@ export interface ExecutionPlan {
 }
 
 const AVAILABLE_TOOLS: MCPTool[] = [
-  // ChainIntel MCP
+  // ChainIntel MCP - All tools priced at 0.0001 ETH
   {
     mcp: 'chainintel',
     tool: 'analyze-wallet',
-    price: '0.01 ETH',
+    price: '0.0001 ETH',
     description: 'Deep cross-chain wallet analysis with AI insights (Base + Solana)'
   },
   {
     mcp: 'chainintel',
     tool: 'detect-whales',
-    price: '0.005 ETH',
+    price: '0.0001 ETH',
     description: 'Check if specific wallet addresses are whales (requires addresses array). Cannot search/find new whales - only validates provided addresses.'
   },
   {
     mcp: 'chainintel',
     tool: 'smart-money-tracker',
-    price: '0.02 ETH',
+    price: '0.0001 ETH',
     description: 'Track a specific wallet with proven trading history and alpha. Requires wallet address. Cannot discover new smart money - only analyzes provided address.'
   },
   {
     mcp: 'chainintel',
     tool: 'risk-score',
-    price: '0.005 ETH',
+    price: '0.0001 ETH',
     description: 'Calculate comprehensive risk score for wallet'
   },
   {
     mcp: 'chainintel',
     tool: 'trading-patterns',
-    price: '0.01 ETH',
+    price: '0.0001 ETH',
     description: 'Analyze trading patterns and identify strategies'
   },
   // TODO: Add sentiment-analyzer, prediction-market, task-orchestrator tools

@@ -178,7 +178,7 @@ export default function AgentChat() {
       const result = await response.json();
 
       // Handle error responses
-      if (!response.ok || !result.plan) {
+      if (!response.ok) {
         const errorMsg = result.error || response.statusText || 'Failed to create plan';
 
         setMessages(prev => [...prev, {
@@ -192,15 +192,40 @@ export default function AgentChat() {
         return;
       }
 
+      // Check if this is a free query (conversational, no blockchain tools needed)
+      if (result.isFreeQuery) {
+        setMessages(prev => [...prev, {
+          role: 'agent',
+          content: result.freeResponse,
+          timestamp: new Date().toISOString()
+        }]);
+
+        await saveMessageToBackend('agent', result.freeResponse);
+        setLoading(false);
+        return;
+      }
+
       // STEP 2: Show plan in sidebar and payment modal
       const planData = result.plan;
+
+      if (!planData) {
+        setMessages(prev => [...prev, {
+          role: 'agent',
+          content: 'Failed to create execution plan',
+          timestamp: new Date().toISOString(),
+          isError: true
+        }]);
+        setLoading(false);
+        return;
+      }
+
       setPlan(planData);
       setCurrentPlan(planData);
       setShowPlan(true);
       setLoading(false);
 
       // Show plan message to user
-      const planMessage = `I've created a plan to answer your question:\n\n${planData.reasoning}\n\n**Total cost: ${planData.totalCost} ETH**\n**Steps: ${planData.steps.length}**\n\nClick "Pay & Execute" to approve payment and run the analysis.`;
+      const planMessage = `I've created a plan to answer your question:\n\n${planData.reasoning}\n\n**Total cost: ${planData.totalCost}**\n**Steps: ${planData.steps.length}**\n\nClick "Pay & Execute" to approve payment and run the analysis.`;
 
       setMessages(prev => [...prev, {
         role: 'agent',

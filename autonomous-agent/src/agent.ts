@@ -240,7 +240,23 @@ export class AutonomousAgent {
     plan: any;
     estimatedCost: string;
     estimatedTime: number;
+    isFreeQuery?: boolean;
+    freeResponse?: string;
   }> {
+    // Check if query needs blockchain tools
+    if (!this.needsBlockchainTools(userQuery)) {
+      // For free conversational queries, return a flag indicating no payment needed
+      const response = await this.answerDirectly(userQuery);
+
+      return {
+        plan: null,
+        estimatedCost: '0 ETH',
+        estimatedTime: 0,
+        isFreeQuery: true,
+        freeResponse: response.report
+      };
+    }
+
     const plan = await createExecutionPlan(
       userQuery,
       this.config.anthropicApiKey
