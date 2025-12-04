@@ -15,31 +15,31 @@ import { settlePayment } from 'thirdweb/x402';
 import { createThirdwebClient } from 'thirdweb';
 import { base, baseSepolia } from 'thirdweb/chains';
 
-// Tool pricing in ETH
+// Tool pricing in ETH - standardized to 0.0001 ETH for all tools
 export const TOOL_PRICING = {
   // Wallet Intelligence
-  'analyze-wallet': '0.01',
-  'detect-whales': '0.005',
-  'smart-money-tracker': '0.02',
-  'risk-score': '0.005',
-  'trading-patterns': '0.01',
+  'analyze-wallet': '0.0001',
+  'detect-whales': '0.0001',
+  'smart-money-tracker': '0.0001',
+  'risk-score': '0.0001',
+  'trading-patterns': '0.0001',
   // Task Escrow
-  'create_task': '0.005',
-  'claim_task': '0.002',
-  'submit_work': '0.002',
-  'verify_work': '0.003',
-  'get_task': '0.001',
+  'create_task': '0.0001',
+  'claim_task': '0.0001',
+  'submit_work': '0.0001',
+  'verify_work': '0.0001',
+  'get_task': '0.0001',
   // IPFS Storage
-  'upload_work_proof': '0.003',
-  'upload_json': '0.002',
-  'download_proof': '0.001',
-  'pin_to_ipfs': '0.002',
-  'get_ipfs_url': '0.0005',
+  'upload_work_proof': '0.0001',
+  'upload_json': '0.0001',
+  'download_proof': '0.0001',
+  'pin_to_ipfs': '0.0001',
+  'get_ipfs_url': '0.0001',
   // Prediction Markets
-  'get_market_data': '0.002',
-  'analyze_market': '0.005',
-  'get_trending_markets': '0.003',
-  'search_markets': '0.002'
+  'get_market_data': '0.0001',
+  'analyze_market': '0.0001',
+  'get_trending_markets': '0.0001',
+  'search_markets': '0.0001'
 } as const;
 
 type ToolName = keyof typeof TOOL_PRICING;

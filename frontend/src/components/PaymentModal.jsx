@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { X, Loader2, CheckCircle, DollarSign } from 'lucide-react';
-import { useFetchWithPayment } from 'thirdweb/react';
+import { useActiveAccount } from 'thirdweb/react';
+import { useAccount } from 'wagmi';
 import { createThirdwebClient } from 'thirdweb';
+import { wrapFetchWithPayment } from 'thirdweb/x402';
+import { privateKeyToAccount } from 'thirdweb/wallets';
 import Button from './Button';
 import Card from './Card';
 
@@ -16,13 +19,14 @@ const client = createThirdwebClient({
 /**
  * Payment Approval Modal
  * Shows plan cost and uses Thirdweb x402 for automatic payment handling
+ * Uses Reown connected wallet (via wagmi) for payments
  */
 export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState(null);
 
-  // Use Thirdweb's official x402 hook
-  const { fetchWithPayment, isPending } = useFetchWithPayment(client);
+  // Get connected account from Reown (wagmi)
+  const { address, isConnected } = useAccount();
 
   if (!isOpen || !plan) return null;
 
@@ -31,19 +35,67 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
       setError(null);
       setIsExecuting(true);
 
+      // Check if user is connected
+      if (!isConnected || !address) {
+        throw new Error('Please connect your wallet first');
+      }
+
       console.log('[PaymentModal] Executing plan with x402 payment...', {
         endpoint: `${AGENT_URL}/execute`,
         planCost: plan.totalCost,
-        steps: plan.steps?.length
+        steps: plan.steps?.length,
+        payerAddress: address
       });
 
-      // Call /execute endpoint - x402 SDK handles everything:
-      // 1. Detects 402 Payment Required response
-      // 2. Shows payment UI to user
-      // 3. Executes payment on-chain
-      // 4. Retries request with payment proof
-      // 5. Returns the final result
-      const result = await fetchWithPayment(`${AGENT_URL}/execute`, {
+      // Create a payment-enabled fetch using user's connected wallet
+      // This will use the Reown wallet they're already connected with
+      const paymentFetch = async (url, options) => {
+        // First, try the request - if 402 response, handle payment via window.ethereum
+        const initialResponse = await fetch(url, options);
+
+        if (initialResponse.status === 402) {
+          console.log('[PaymentModal] 402 Payment Required - processing payment...');
+
+          const paymentDetails = await initialResponse.json();
+          console.log('[PaymentModal] Payment details:', paymentDetails);
+
+          // Get user to sign and pay via their connected wallet
+          if (!window.ethereum) {
+            throw new Error('No Web3 wallet found');
+          }
+
+          const provider = window.ethereum;
+          const accounts = await provider.request({ method: 'eth_requestAccounts' });
+
+          // Send payment transaction
+          const txHash = await provider.request({
+            method: 'eth_sendTransaction',
+            params: [{
+              from: accounts[0],
+              to: paymentDetails.payment_details?.payTo || paymentDetails.payment_required?.recipient,
+              value: `0x${(parseFloat(paymentDetails.payment_details?.price || '0.001') * 1e18).toString(16)}`
+            }]
+          });
+
+          console.log('[PaymentModal] Payment transaction sent:', txHash);
+
+          // Retry request with payment proof
+          const retryResponse = await fetch(url, {
+            ...options,
+            headers: {
+              ...options.headers,
+              'x-payment': txHash
+            }
+          });
+
+          return retryResponse;
+        }
+
+        return initialResponse;
+      };
+
+      // Call /execute endpoint with payment handling
+      const result = await paymentFetch(`${AGENT_URL}/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -73,7 +125,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
     }
   };
 
-  const isLoading = isPending || isExecuting;
+  const isLoading = isExecuting;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

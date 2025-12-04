@@ -56,7 +56,22 @@ export class AutonomousAgent {
    * Check if query needs blockchain tools or can be answered directly
    */
   private needsBlockchainTools(query: string): boolean {
-    const lowerQuery = query.toLowerCase();
+    const lowerQuery = query.toLowerCase().trim();
+
+    // Short conversational queries should be answered for free
+    if (query.length < 30) {
+      const conversationalPatterns = [
+        /^(hi|hello|hey|greetings)/i,
+        /^(why|how|what|when|where)\s+(is|are|do|does|can|should)/i,
+        /^(yes|no|ok|okay|thanks|thank you)/i,
+        /^(tell me|show me|explain)/i
+      ];
+
+      // If it's a short conversational query without specific blockchain terms, answer free
+      if (conversationalPatterns.some(pattern => pattern.test(query))) {
+        return false;
+      }
+    }
 
     // Keywords that indicate blockchain/wallet analysis needed
     const blockchainKeywords = [
