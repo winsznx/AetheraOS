@@ -332,24 +332,25 @@ export default function AgentChat() {
 
   return (
     <DashboardLayout>
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 rounded-xl bg-brand-black dark:bg-white flex items-center justify-center">
-          <Brain className="w-6 h-6 text-white dark:text-brand-black" />
+      <div className="flex flex-col h-full">
+        <div className="flex items-center gap-3 mb-4 flex-shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-brand-black dark:bg-white flex items-center justify-center">
+            <Brain className="w-6 h-6 text-white dark:text-brand-black" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-display font-bold text-brand-black dark:text-white">
+              AI Agent Chat
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Powered by Claude 3.5 + ChainIntel MCP
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-display font-bold text-brand-black dark:text-white">
-            AI Agent Chat
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Powered by Claude 3.5 + ChainIntel MCP
-          </p>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-12 gap-6">
-        {/* Chat Area */}
-        <div className="col-span-12 lg:col-span-8">
-          <Card className="h-[calc(100vh-250px)] flex flex-col">
+        <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
+          {/* Chat Area */}
+          <div className="col-span-12 lg:col-span-8 flex flex-col min-h-0">
+            <Card className="flex-1 flex flex-col min-h-0">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-4 mb-4 p-4">
               {messages.map((msg, idx) => (
@@ -428,7 +429,7 @@ export default function AgentChat() {
         </div>
 
         {/* Sidebar - Current Plan */}
-        <div className="col-span-12 lg:col-span-4">
+        <div className="col-span-12 lg:col-span-4 flex flex-col min-h-0 overflow-y-auto space-y-6">
           <Card>
             <h2 className="font-display font-bold text-lg text-brand-black dark:text-white mb-4 flex items-center gap-2">
               <DollarSign className="w-5 h-5" />
@@ -496,7 +497,7 @@ export default function AgentChat() {
           </Card>
 
           {/* Example Queries */}
-          <Card className="mt-6">
+          <Card>
             <h2 className="font-display font-bold text-lg text-brand-black dark:text-white mb-4">
               Example Queries
             </h2>
@@ -520,6 +521,7 @@ export default function AgentChat() {
               ))}
             </div>
           </Card>
+        </div>
         </div>
       </div>
 

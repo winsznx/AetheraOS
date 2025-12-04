@@ -31,7 +31,7 @@ export default function DashboardLayout({ children, className = '' }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -51,14 +51,14 @@ export default function DashboardLayout({ children, className = '' }) {
       {/* Main Content */}
       <main
         className={cn(
-          'transition-all duration-300 min-h-screen',
+          'transition-all duration-300 h-screen flex flex-col',
           'lg:ml-20',
           !sidebarCollapsed && 'lg:ml-64',
           className
         )}
       >
         {/* Top Bar */}
-        <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-4">
+        <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {/* Mobile Menu Button */}
@@ -95,7 +95,7 @@ export default function DashboardLayout({ children, className = '' }) {
         </div>
 
         {/* Page Content */}
-        <div className="p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
         </div>
       </main>
