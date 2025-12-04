@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle, AlertCircle, DollarSign } from 'lucide-react';
-import { useActiveAccount } from 'thirdweb/react';
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther } from 'viem';
+import { baseSepolia } from 'wagmi/chains';
 import { encodePayment } from 'thirdweb/x402';
 import { createThirdwebClient } from 'thirdweb';
-import { sendTransaction, prepareTransaction } from 'thirdweb';
-import { baseSepolia } from 'thirdweb/chains';
 import Button from './Button';
 import Card from './Card';
 
@@ -12,7 +12,7 @@ const PLATFORM_WALLET = import.meta.env.VITE_PLATFORM_WALLET || '0xA81514fBAE19D
 const THIRDWEB_CLIENT_ID = import.meta.env.VITE_THIRDWEB_CLIENT_ID;
 const AGENT_URL = import.meta.env.VITE_AGENT_URL;
 
-// Create Thirdweb client for x402 payments
+// Create Thirdweb client for x402 payment encoding
 const client = createThirdwebClient({
   clientId: THIRDWEB_CLIENT_ID
 });
@@ -22,11 +22,16 @@ const client = createThirdwebClient({
  * Shows plan cost and requests user payment approval
  */
 export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
-  const account = useActiveAccount();
+  const { address } = useAccount();
   const [status, setStatus] = useState('idle'); // idle, paying, confirming, success, error
   const [error, setError] = useState(null);
   const [hasCalledApprove, setHasCalledApprove] = useState(false);
-  const [txHash, setTxHash] = useState(null);
+
+  const { sendTransaction, data: txHash, isPending: isSending } = useSendTransaction();
+
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
 
   // Reset state when modal closes
   useEffect(() => {
@@ -34,14 +39,66 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
       setStatus('idle');
       setError(null);
       setHasCalledApprove(false);
-      setTxHash(null);
     }
   }, [isOpen]);
+
+  // Update status based on transaction state
+  useEffect(() => {
+    if (isSending && status !== 'paying') {
+      setStatus('paying');
+    } else if (isConfirming && status !== 'confirming') {
+      setStatus('confirming');
+    }
+  }, [isSending, isConfirming, status]);
+
+  // Update status and call onApprove when payment is confirmed
+  useEffect(() => {
+    if (isConfirmed && txHash && !hasCalledApprove) {
+      setStatus('success');
+      setHasCalledApprove(true);
+
+      // Prepare x402 payment proof after transaction confirms
+      const prepareAndApprove = async () => {
+        try {
+          const costValue = (plan?.totalCost || '0').replace(' ETH', '').trim();
+
+          // Encode x402 payment proof
+          const paymentData = await encodePayment({
+            client,
+            payTo: PLATFORM_WALLET,
+            price: costValue,
+            network: 'eip155:84532', // Base Sepolia
+            resourceUrl: `${AGENT_URL}/execute`,
+            metadata: {
+              transactionHash: txHash,
+              planId: plan.id || Date.now(),
+              steps: plan.steps?.length || 0,
+              intent: plan.intent
+            }
+          });
+
+          console.log('[PaymentModal] x402 proof encoded');
+
+          // Call onApprove with payment proof
+          onApprove({
+            paymentData, // x402 payment proof from Thirdweb
+            transactionHash: txHash,
+            from: address
+          });
+        } catch (err) {
+          console.error('[PaymentModal] Error encoding payment proof:', err);
+          setError('Failed to encode payment proof');
+        }
+      };
+
+      prepareAndApprove();
+    }
+  }, [isConfirmed, txHash, hasCalledApprove, plan, address, onApprove]);
 
   if (!isOpen || !plan) return null;
 
   const handlePayment = async () => {
-    if (!account) {
+    if (!address) {
       setError('Please connect your wallet first');
       return;
     }
@@ -52,58 +109,22 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
 
       // Clean totalCost - remove " ETH" suffix if present
       const costValue = plan.totalCost.replace(' ETH', '').trim();
-      const valueInWei = BigInt(Math.floor(parseFloat(costValue) * 1e18));
 
-      console.log('[PaymentModal] Preparing x402 payment:', {
+      console.log('[PaymentModal] Sending payment:', {
         amount: costValue,
-        valueInWei: valueInWei.toString(),
-        to: PLATFORM_WALLET
-      });
-
-      // Prepare payment transaction
-      const transaction = prepareTransaction({
-        client,
-        chain: baseSepolia,
         to: PLATFORM_WALLET,
-        value: valueInWei
+        from: address
       });
 
-      // Encode x402 payment proof
-      const paymentData = await encodePayment({
-        client,
-        payTo: PLATFORM_WALLET,
-        price: costValue,
-        network: 'eip155:84532', // Base Sepolia
-        resourceUrl: `${AGENT_URL}/execute`,
-        metadata: {
-          planId: plan.id || Date.now(),
-          steps: plan.steps?.length || 0,
-          intent: plan.intent
-        }
+      // Send payment transaction using wagmi
+      await sendTransaction({
+        to: PLATFORM_WALLET,
+        value: parseEther(costValue),
+        chainId: baseSepolia.id
       });
 
-      console.log('[PaymentModal] Encoded x402 payment proof');
-
-      // Send transaction
       setStatus('confirming');
-      const result = await sendTransaction({
-        transaction,
-        account
-      });
-
-      console.log('[PaymentModal] Payment sent:', result.transactionHash);
-      setTxHash(result.transactionHash);
-      setStatus('success');
-      setHasCalledApprove(true);
-
-      // Call onApprove with x402 payment proof
-      setTimeout(() => {
-        onApprove({
-          paymentData, // x402 payment proof from Thirdweb
-          transactionHash: result.transactionHash,
-          from: account.address
-        });
-      }, 500);
+      console.log('[PaymentModal] Transaction sent, waiting for confirmation...');
 
     } catch (err) {
       console.error('Payment failed:', err);
