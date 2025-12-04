@@ -73,8 +73,8 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <Card className="w-full max-w-lg mx-4 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <Card className="w-full max-w-sm mx-auto relative max-h-[85vh] overflow-y-auto">
         {/* Close button */}
         {status === 'idle' && (
           <button
@@ -86,68 +86,67 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
         )}
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30">
-            <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="flex items-center gap-2 mb-3">
+          <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+            <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">
               Payment Required
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Approve this transaction to execute your query
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Approve to execute your query
             </p>
           </div>
         </div>
 
         {/* Plan Details */}
-        <div className="space-y-4 mb-6">
-          <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-            <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Query Intent</h3>
-            <p className="text-sm text-gray-700 dark:text-gray-300">{plan.intent}</p>
+        <div className="space-y-2 mb-3">
+          <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            <h3 className="font-semibold text-sm mb-1 text-gray-900 dark:text-white">Query Intent</h3>
+            <p className="text-xs text-gray-700 dark:text-gray-300">{plan.intent}</p>
           </div>
 
-          <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-            <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Execution Plan</h3>
-            <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{plan.reasoning}</p>
-            <div className="space-y-2">
+          <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            <h3 className="font-semibold text-sm mb-1 text-gray-900 dark:text-white">Execution Plan</h3>
+            <p className="text-xs text-gray-700 dark:text-gray-300 mb-1.5">{plan.reasoning}</p>
+            <div className="space-y-1">
               {plan.steps?.map((step, idx) => (
-                <div key={idx} className="text-sm">
+                <div key={idx} className="text-xs">
                   <span className="font-medium text-gray-900 dark:text-white">Step {idx + 1}:</span>{' '}
                   <span className="text-gray-700 dark:text-gray-300">{step.tool}</span>
-                  <span className="text-gray-500 dark:text-gray-500 ml-2">({step.reason})</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Cost Breakdown */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Cost</span>
-              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+          <div className="p-2.5 rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Total Cost</span>
+              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
                 {plan.totalCost}
               </span>
             </div>
-            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
               <span>Network</span>
-              <span>Base Sepolia (Testnet)</span>
+              <span>Base Sepolia</span>
             </div>
-            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
               <span>Recipient</span>
-              <span className="font-mono">{PLATFORM_WALLET.slice(0, 6)}...{PLATFORM_WALLET.slice(-4)}</span>
+              <span className="font-mono text-[10px]">{PLATFORM_WALLET.slice(0, 6)}...{PLATFORM_WALLET.slice(-4)}</span>
             </div>
           </div>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="mb-2 p-2.5 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-red-900 dark:text-red-100">Payment Failed</p>
-                <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+                <p className="font-semibold text-sm text-red-900 dark:text-red-100">Payment Failed</p>
+                <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">{error}</p>
               </div>
             </div>
           </div>
@@ -155,34 +154,34 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
 
         {/* Status Messages */}
         {status === 'paying' && (
-          <div className="mb-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-3">
-              <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
-              <span className="text-sm text-blue-900 dark:text-blue-100">Waiting for wallet approval...</span>
+          <div className="mb-2 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
+              <span className="text-xs text-blue-900 dark:text-blue-100">Waiting for wallet approval...</span>
             </div>
           </div>
         )}
 
         {status === 'confirming' && (
-          <div className="mb-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-3">
-              <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
-              <span className="text-sm text-blue-900 dark:text-blue-100">Confirming transaction...</span>
+          <div className="mb-2 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
+              <span className="text-xs text-blue-900 dark:text-blue-100">Confirming transaction...</span>
             </div>
           </div>
         )}
 
         {status === 'success' && (
-          <div className="mb-4 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-              <span className="text-sm text-green-900 dark:text-green-100">Payment confirmed! Executing query...</span>
+          <div className="mb-2 p-2.5 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <span className="text-xs text-green-900 dark:text-green-100">Payment confirmed! Executing query...</span>
             </div>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <Button
             variant="secondary"
             onClick={onCancel}
@@ -224,7 +223,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
         </div>
 
         {/* Testnet Notice */}
-        <p className="mt-4 text-xs text-center text-gray-500 dark:text-gray-400">
+        <p className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
           💡 This is Base Sepolia testnet. Get free ETH from{' '}
           <a
             href="https://www.alchemy.com/faucets/base-sepolia"
