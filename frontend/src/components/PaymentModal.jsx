@@ -1,34 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Loader2, CheckCircle, DollarSign } from 'lucide-react';
-import { useAccount } from 'wagmi';
-import { createThirdwebClient } from 'thirdweb';
-import { createWalletAdapter } from 'thirdweb/adapters/wagmi';
-import { baseSepolia } from 'thirdweb/chains';
-import { wrapFetchWithPayment } from 'thirdweb/x402';
+import { useAccount, useWalletClient, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther } from 'viem';
 import Button from './Button';
 import Card from './Card';
-import { useWalletClient } from 'wagmi';
 
-const THIRDWEB_CLIENT_ID = import.meta.env.VITE_THIRDWEB_CLIENT_ID;
 const AGENT_URL = import.meta.env.VITE_AGENT_URL;
-
-// Create Thirdweb client for x402 payments
-const client = createThirdwebClient({
-  clientId: THIRDWEB_CLIENT_ID
-});
 
 /**
  * Payment Approval Modal
- * Shows plan cost and uses Thirdweb x402 for automatic payment handling
- * Uses Reown connected wallet (via wagmi adapter)
+ * Shows plan cost and handles x402 payment via Reown wallet
  */
 export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState(null);
+  const [paymentTxHash, setPaymentTxHash] = useState(null);
 
   // Get connected account from Reown (wagmi)
-  const { address, isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient();
+  const { address, isConnected, chain } = useAccount();
+  const { sendTransactionAsync } = useSendTransaction();
 
   if (!isOpen || !plan) return null;
 
@@ -38,55 +28,89 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
       setIsExecuting(true);
 
       // Check if user is connected
-      if (!isConnected || !address || !walletClient) {
+      if (!isConnected || !address) {
         throw new Error('Please connect your wallet first');
       }
 
-      console.log('[PaymentModal] Executing plan with x402 payment...', {
+      console.log('[PaymentModal] Starting x402 payment flow...', {
         endpoint: `${AGENT_URL}/execute`,
         planCost: plan.totalCost,
         steps: plan.steps?.length,
         payerAddress: address
       });
 
-      // Create Thirdweb wallet adapter from wagmi wallet
-      const thirdwebWallet = createWalletAdapter({
-        client,
-        adaptedAccount: walletClient.account,
-        chain: baseSepolia,
-        onDisconnect: () => {},
-        switchChain: async (chain) => {
-          await walletClient.switchChain({ id: chain.id });
-        }
-      });
-
-      console.log('[PaymentModal] Created Thirdweb wallet adapter from Reown wallet');
-
-      // Wrap fetch with Thirdweb x402 payment handling
-      // This will automatically handle 402 responses and payment flow
-      const fetchWithPayment = wrapFetchWithPayment(fetch, client, thirdwebWallet);
-
-      // Call /execute endpoint - Thirdweb SDK handles payment automatically
-      const result = await fetchWithPayment(`${AGENT_URL}/execute`, {
+      // Step 1: Try to execute - expect 402 Payment Required
+      const initialResponse = await fetch(`${AGENT_URL}/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          plan: plan
-        })
+        body: JSON.stringify({ plan })
       });
 
-      console.log('[PaymentModal] Execution completed:', result);
-
-      // Parse result
-      const data = await result.json();
-
-      if (!result.ok || !data.success) {
-        throw new Error(data.error || data.report || 'Execution failed');
+      if (initialResponse.status !== 402) {
+        // Not a payment request - handle response directly
+        const data = await initialResponse.json();
+        if (!initialResponse.ok || !data.success) {
+          throw new Error(data.error || 'Execution failed');
+        }
+        onApprove(data);
+        setIsExecuting(false);
+        return;
       }
 
-      // Call onApprove with the result
+      // Step 2: Got 402 - extract payment details
+      const paymentDetails = await initialResponse.json();
+      console.log('[PaymentModal] 402 Payment Required:', paymentDetails);
+
+      const payTo = paymentDetails.payment_details?.payTo;
+      const priceStr = paymentDetails.payment_details?.price || '0.001';
+
+      if (!payTo) {
+        throw new Error('Invalid payment details received');
+      }
+
+      // Step 3: Send payment transaction via Reown wallet
+      console.log('[PaymentModal] Sending payment transaction...', { to: payTo, value: priceStr });
+
+      const txHash = await sendTransactionAsync({
+        to: payTo,
+        value: parseEther(priceStr)
+      });
+
+      console.log('[PaymentModal] Payment transaction sent:', txHash);
+      setPaymentTxHash(txHash);
+
+      // Step 4: Retry request with payment proof
+      // Format payment proof as JSON for Thirdweb x402
+      const paymentProof = JSON.stringify({
+        transactionHash: txHash,
+        from: address,
+        to: payTo,
+        value: priceStr,
+        chainId: chain?.id || 84532
+      });
+
+      console.log('[PaymentModal] Retrying with payment proof...');
+
+      const retryResponse = await fetch(`${AGENT_URL}/execute`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-payment': paymentProof
+        },
+        body: JSON.stringify({ plan })
+      });
+
+      console.log('[PaymentModal] Retry response:', retryResponse.status);
+
+      const data = await retryResponse.json();
+
+      if (!retryResponse.ok || !data.success) {
+        throw new Error(data.error || data.report || 'Execution failed after payment');
+      }
+
+      // Success!
       onApprove(data);
       setIsExecuting(false);
 
