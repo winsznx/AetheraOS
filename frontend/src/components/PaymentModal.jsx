@@ -1,256 +1,235 @@
 import { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
-import { cn } from '../utils/cn';
+import { X, Loader2, CheckCircle, AlertCircle, DollarSign } from 'lucide-react';
+import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { parseEther } from 'viem';
+import { baseSepolia } from 'wagmi/chains';
 import Button from './Button';
+import Card from './Card';
+
+const PLATFORM_WALLET = import.meta.env.VITE_PLATFORM_WALLET || '0xA81514fBAE19DDEb16F4881c02c363c8E7c2B0d8';
 
 /**
- * PaymentModal Component
- * Modal for x402 payment approval with Thirdweb
- * Uses global CSS classes from styles/index.css
- *
- * @param {boolean} isOpen - Modal visibility
- * @param {function} onClose - Close modal callback
- * @param {object} paymentDetails - Payment details
- * @param {function} onApprove - Approve payment callback
+ * Payment Approval Modal
+ * Shows plan cost and requests user payment approval
  */
-export default function PaymentModal({
-  isOpen,
-  onClose,
-  paymentDetails = {},
-  onApprove
-}) {
-  const [status, setStatus] = useState('pending'); // pending, processing, success, error
-  const [errorMessage, setErrorMessage] = useState('');
-  const [txHash, setTxHash] = useState('');
+export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
+  const { address } = useAccount();
+  const [status, setStatus] = useState('idle'); // idle, paying, confirming, success, error
+  const [error, setError] = useState(null);
 
-  const {
-    toolName = 'Unknown Tool',
-    price = '0',
-    currency = 'ETH',
-    network = 'Base Sepolia',
-    description = '',
-    category = ''
-  } = paymentDetails;
+  const { sendTransaction, data: txHash, isPending: isSending } = useSendTransaction();
 
-  // Reset status when modal opens
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
+  // Update status based on transaction state
   useEffect(() => {
-    if (isOpen) {
-      setStatus('pending');
-      setErrorMessage('');
-      setTxHash('');
+    if (isSending) setStatus('paying');
+    else if (isConfirming) setStatus('confirming');
+    else if (isConfirmed && txHash) {
+      setStatus('success');
+      // Automatically call onApprove with payment proof
+      setTimeout(() => {
+        onApprove({
+          transactionHash: txHash,
+          amount: parseEther(plan?.totalCost || '0').toString(),
+          chain: baseSepolia.id.toString(),
+          from: address
+        });
+      }, 500);
     }
-  }, [isOpen]);
+  }, [isSending, isConfirming, isConfirmed, txHash, address, plan, onApprove]);
 
-  const handleApprove = async () => {
-    setStatus('processing');
-    setErrorMessage('');
+  if (!isOpen || !plan) return null;
+
+  const handlePayment = async () => {
+    if (!address) {
+      setError('Please connect your wallet first');
+      return;
+    }
 
     try {
-      const result = await onApprove();
+      setError(null);
+      setStatus('paying');
 
-      if (result?.success) {
-        setStatus('success');
-        if (result.txHash) {
-          setTxHash(result.txHash);
-        }
-
-        // Auto-close after success
-        setTimeout(() => {
-          onClose();
-        }, 3000);
-      } else {
-        throw new Error(result?.error || 'Payment failed');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
+      // Send payment transaction
+      await sendTransaction({
+        to: PLATFORM_WALLET,
+        value: parseEther(plan.totalCost),
+        chainId: baseSepolia.id
+      });
+    } catch (err) {
+      console.error('Payment failed:', err);
+      setError(err.message || 'Payment failed');
       setStatus('error');
-      setErrorMessage(error.message || 'Failed to process payment');
     }
   };
-
-  const handleClose = () => {
-    if (status !== 'processing') {
-      onClose();
-    }
-  };
-
-  if (!isOpen) return null;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 dark:bg-black/70 z-40 animate-fade-in"
-        onClick={handleClose}
-      />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <Card className="w-full max-w-lg mx-4 relative">
+        {/* Close button */}
+        {status === 'idle' && (
+          <button
+            onClick={onCancel}
+            className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
 
-      {/* Modal */}
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-        <div
-          className={cn(
-            'card-base w-full max-w-md animate-fade-in-up',
-            'relative'
-          )}
-        >
-          {/* Close button */}
-          {status !== 'processing' && (
-            <button
-              onClick={handleClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-            >
-              <X size={24} />
-            </button>
-          )}
-
-          {/* Header */}
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-primary mb-2">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30">
+            <DollarSign className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               Payment Required
             </h2>
-            <p className="text-secondary text-sm">
-              Approve payment to use this tool
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Approve this transaction to execute your query
             </p>
           </div>
-
-          {/* Status-based Content */}
-          {status === 'pending' && (
-            <>
-              {/* Tool Details */}
-              <div className="space-y-4 mb-6">
-                {/* Tool Name */}
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-secondary">Tool</p>
-                    <p className="text-lg font-medium text-primary">{toolName}</p>
-                    {category && (
-                      <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-secondary rounded">
-                        {category}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Description */}
-                {description && (
-                  <div>
-                    <p className="text-sm text-secondary mb-1">Description</p>
-                    <p className="text-sm text-primary">{description}</p>
-                  </div>
-                )}
-
-                {/* Divider */}
-                <div className="border-t border-gray-200 dark:border-gray-700" />
-
-                {/* Payment Details */}
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-secondary">Amount</span>
-                    <span className="text-lg font-semibold text-primary">
-                      {price} {currency}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-secondary">Network</span>
-                    <span className="text-sm font-medium text-primary">{network}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-secondary">Payment Protocol</span>
-                    <span className="text-secondary">x402 via Thirdweb</span>
-                  </div>
-                </div>
-
-                {/* Info Box */}
-                <div className="flex gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <AlertCircle size={16} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
-                    Payment will be processed on {network}. Make sure you have sufficient {currency} in your wallet.
-                  </p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleClose}
-                  className="flex-1"
-                  label="Cancel"
-                />
-                <Button
-                  variant="primary"
-                  onClick={handleApprove}
-                  className="flex-1"
-                  label={`Pay ${price} ${currency}`}
-                />
-              </div>
-            </>
-          )}
-
-          {status === 'processing' && (
-            <div className="py-12 text-center">
-              <Loader2 size={48} className="mx-auto mb-4 text-brand-black dark:text-white animate-spin" />
-              <h3 className="text-lg font-medium text-primary mb-2">
-                Processing Payment
-              </h3>
-              <p className="text-sm text-secondary">
-                Please confirm the transaction in your wallet...
-              </p>
-            </div>
-          )}
-
-          {status === 'success' && (
-            <div className="py-12 text-center">
-              <CheckCircle size={48} className="mx-auto mb-4 text-green-600 dark:text-green-400" />
-              <h3 className="text-lg font-medium text-primary mb-2">
-                Payment Successful!
-              </h3>
-              <p className="text-sm text-secondary mb-4">
-                Your payment has been processed successfully.
-              </p>
-              {txHash && (
-                <a
-                  href={`https://sepolia.basescan.org/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  View transaction
-                  <ExternalLink size={14} />
-                </a>
-              )}
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="py-12 text-center">
-              <AlertCircle size={48} className="mx-auto mb-4 text-red-600 dark:text-red-400" />
-              <h3 className="text-lg font-medium text-primary mb-2">
-                Payment Failed
-              </h3>
-              <p className="text-sm text-secondary mb-6">
-                {errorMessage || 'An error occurred while processing your payment.'}
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handleClose}
-                  className="flex-1"
-                  label="Close"
-                />
-                <Button
-                  variant="primary"
-                  onClick={() => {
-                    setStatus('pending');
-                    setErrorMessage('');
-                  }}
-                  className="flex-1"
-                  label="Try Again"
-                />
-              </div>
-            </div>
-          )}
         </div>
-      </div>
-    </>
+
+        {/* Plan Details */}
+        <div className="space-y-4 mb-6">
+          <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+            <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Query Intent</h3>
+            <p className="text-sm text-gray-700 dark:text-gray-300">{plan.intent}</p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50">
+            <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">Execution Plan</h3>
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{plan.reasoning}</p>
+            <div className="space-y-2">
+              {plan.steps?.map((step, idx) => (
+                <div key={idx} className="text-sm">
+                  <span className="font-medium text-gray-900 dark:text-white">Step {idx + 1}:</span>{' '}
+                  <span className="text-gray-700 dark:text-gray-300">{step.tool}</span>
+                  <span className="text-gray-500 dark:text-gray-500 ml-2">({step.reason})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cost Breakdown */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Cost</span>
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {plan.totalCost} ETH
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+              <span>Network</span>
+              <span>Base Sepolia (Testnet)</span>
+            </div>
+            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+              <span>Recipient</span>
+              <span className="font-mono">{PLATFORM_WALLET.slice(0, 6)}...{PLATFORM_WALLET.slice(-4)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-900 dark:text-red-100">Payment Failed</p>
+                <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Messages */}
+        {status === 'paying' && (
+          <div className="mb-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
+              <span className="text-sm text-blue-900 dark:text-blue-100">Waiting for wallet approval...</span>
+            </div>
+          </div>
+        )}
+
+        {status === 'confirming' && (
+          <div className="mb-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-400 animate-spin" />
+              <span className="text-sm text-blue-900 dark:text-blue-100">Confirming transaction...</span>
+            </div>
+          </div>
+        )}
+
+        {status === 'success' && (
+          <div className="mb-4 p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <span className="text-sm text-green-900 dark:text-green-100">Payment confirmed! Executing query...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <Button
+            variant="secondary"
+            onClick={onCancel}
+            className="flex-1"
+            disabled={status === 'paying' || status === 'confirming' || status === 'success'}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handlePayment}
+            className="flex-1"
+            disabled={status !== 'idle' && status !== 'error'}
+          >
+            {status === 'paying' && (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Approving...
+              </>
+            )}
+            {status === 'confirming' && (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Confirming...
+              </>
+            )}
+            {status === 'success' && (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Executing...
+              </>
+            )}
+            {(status === 'idle' || status === 'error') && (
+              <>
+                <DollarSign className="w-4 h-4 mr-2" />
+                Pay {plan.totalCost} ETH
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Testnet Notice */}
+        <p className="mt-4 text-xs text-center text-gray-500 dark:text-gray-400">
+          💡 This is Base Sepolia testnet. Get free ETH from{' '}
+          <a
+            href="https://www.alchemy.com/faucets/base-sepolia"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Alchemy Faucet
+          </a>
+        </p>
+      </Card>
+    </div>
   );
 }

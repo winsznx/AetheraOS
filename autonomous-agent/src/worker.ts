@@ -19,6 +19,12 @@ interface QueryRequest {
 
 interface ExecuteRequest {
   plan: any;
+  paymentProof?: {
+    transactionHash: string;
+    amount: string;
+    chain: string;
+    from: string;
+  };
 }
 
 const CORS_HEADERS = {
@@ -166,7 +172,7 @@ export default {
       // Execute plan endpoint
       if (path === '/execute' && request.method === 'POST') {
         const body = await request.json() as ExecuteRequest;
-        const { plan } = body;
+        const { plan, paymentProof } = body;
 
         if (!plan) {
           return new Response(
@@ -181,7 +187,10 @@ export default {
           );
         }
 
-        const result = await agent.executePlan(plan);
+        // Execute with user payment proof if provided, otherwise use agent wallet
+        const result = paymentProof
+          ? await agent.executePlanWithPayment(plan, paymentProof)
+          : await agent.executePlan(plan);
 
         return new Response(
           JSON.stringify(result, null, 2),

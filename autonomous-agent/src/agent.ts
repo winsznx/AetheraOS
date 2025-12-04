@@ -15,6 +15,13 @@ export interface AgentConfig {
   fetchWithPayment: typeof fetch;
 }
 
+export interface PaymentProof {
+  transactionHash: string;
+  amount: string;
+  chain: string;
+  from: string;
+}
+
 export interface AgentResponse {
   success: boolean;
   query: string;
@@ -46,12 +53,108 @@ export class AutonomousAgent {
   }
 
   /**
+   * Check if query needs blockchain tools or can be answered directly
+   */
+  private needsBlockchainTools(query: string): boolean {
+    const lowerQuery = query.toLowerCase();
+
+    // Keywords that indicate blockchain/wallet analysis needed
+    const blockchainKeywords = [
+      'wallet', 'address', 'transaction', 'whale', 'smart money',
+      'trading', 'portfolio', 'token', 'nft', 'crypto asset',
+      'risk score', 'analyze 0x', 'track 0x', 'check 0x',
+      'base', 'ethereum', 'solana', 'blockchain'
+    ];
+
+    // Check if query contains blockchain keywords AND a wallet address
+    const hasWalletAddress = /0x[a-fA-F0-9]{40}/.test(query);
+    const hasBlockchainKeyword = blockchainKeywords.some(keyword => lowerQuery.includes(keyword));
+
+    return hasWalletAddress || hasBlockchainKeyword;
+  }
+
+  /**
+   * Answer general questions directly without blockchain tools
+   */
+  private async answerDirectly(query: string): Promise<AgentResponse> {
+    const startTime = Date.now();
+
+    try {
+      const Anthropic = (await import('@anthropic-ai/sdk')).default;
+      const anthropic = new Anthropic({ apiKey: this.config.anthropicApiKey });
+
+      const message = await anthropic.messages.create({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: query
+        }]
+      });
+
+      const textContent = message.content.find(block => block.type === 'text');
+      const answer = textContent ? (textContent as any).text : 'I apologize, but I could not generate a response.';
+
+      const totalTime = Date.now() - startTime;
+
+      return {
+        success: true,
+        query,
+        plan: null,
+        executionResult: null,
+        synthesis: null,
+        report: answer,
+        conversation: [
+          `**You:** ${query}`,
+          `**Agent:** ${answer}`
+        ],
+        metadata: {
+          totalCost: 0,
+          executionTime: totalTime,
+          timestamp: new Date().toISOString()
+        }
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(query, error.message, Date.now() - startTime);
+    }
+  }
+
+  /**
+   * Create error response
+   */
+  private createErrorResponse(query: string, error: string, executionTime: number): AgentResponse {
+    return {
+      success: false,
+      query,
+      plan: null,
+      executionResult: null,
+      synthesis: null,
+      report: `Error: ${error}`,
+      conversation: [
+        `**You:** ${query}`,
+        `**Agent:** I encountered an error: ${error}`
+      ],
+      metadata: {
+        totalCost: 0,
+        executionTime,
+        timestamp: new Date().toISOString()
+      }
+    };
+  }
+
+  /**
    * Process user query end-to-end
    */
   async processQuery(userQuery: string): Promise<AgentResponse> {
     const startTime = Date.now();
 
     try {
+      // ROUTING: Check if query needs blockchain tools
+      if (!this.needsBlockchainTools(userQuery)) {
+        console.log('[Agent] Query does not need blockchain tools, answering directly...');
+        return await this.answerDirectly(userQuery);
+      }
+
       // 1. PLANNING PHASE: Understand intent and create execution plan
       console.log('[Agent] Analyzing query and creating plan...');
       const plan = await createExecutionPlan(
@@ -111,24 +214,7 @@ export class AutonomousAgent {
       };
     } catch (error: any) {
       console.error('[Agent] Error:', error);
-
-      return {
-        success: false,
-        query: userQuery,
-        plan: null,
-        executionResult: null,
-        synthesis: null,
-        report: `Error: ${error.message}`,
-        conversation: [
-          `**You:** ${userQuery}`,
-          `**Agent:** I encountered an error: ${error.message}`
-        ],
-        metadata: {
-          totalCost: 0,
-          executionTime: Date.now() - startTime,
-          timestamp: new Date().toISOString()
-        }
-      };
+      return this.createErrorResponse(userQuery, error.message, Date.now() - startTime);
     }
   }
 
@@ -158,7 +244,78 @@ export class AutonomousAgent {
   }
 
   /**
-   * Execute a pre-approved plan
+   * Create fetch with user payment proof
+   */
+  private createFetchWithUserPayment(paymentProof: PaymentProof): typeof fetch {
+    return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const headers = {
+        ...init?.headers,
+        'x-payment': JSON.stringify(paymentProof),
+        'X-Payment-TxHash': paymentProof.transactionHash,
+        'X-Payment-Amount': paymentProof.amount,
+        'X-Payment-Chain': paymentProof.chain,
+        'X-Payment-From': paymentProof.from
+      };
+
+      return fetch(input, {
+        ...init,
+        headers
+      });
+    };
+  }
+
+  /**
+   * Execute a pre-approved plan with user payment proof
+   */
+  async executePlanWithPayment(plan: any, paymentProof: PaymentProof): Promise<AgentResponse> {
+    const startTime = Date.now();
+
+    try {
+      // Create temporary client with user's payment proof
+      const clientWithPayment = createChainIntelClient(
+        this.config.chainIntelUrl,
+        this.createFetchWithUserPayment(paymentProof)
+      );
+
+      const executionResult = await executePlan(plan, clientWithPayment);
+
+      if (!executionResult.success) {
+        throw new Error(`Execution failed: ${executionResult.errors?.join(', ')}`);
+      }
+
+      const synthesis = await synthesizeResults(
+        plan.intent || 'User query',
+        executionResult,
+        this.config.anthropicApiKey
+      );
+
+      const report = generateReport(plan.intent, executionResult, synthesis);
+      const conversation = generateConversation(plan.intent, plan, executionResult, synthesis);
+
+      const totalTime = Date.now() - startTime;
+
+      return {
+        success: true,
+        query: plan.intent,
+        plan,
+        executionResult,
+        synthesis,
+        report,
+        conversation,
+        metadata: {
+          totalCost: executionResult.totalCost,
+          executionTime: totalTime,
+          timestamp: new Date().toISOString()
+        }
+      };
+    } catch (error: any) {
+      console.error('[Agent] Execution error:', error);
+      return this.createErrorResponse(plan.intent, error.message, Date.now() - startTime);
+    }
+  }
+
+  /**
+   * Execute a pre-approved plan (without payment proof - uses agent wallet)
    */
   async executePlan(plan: any): Promise<AgentResponse> {
     // Use the existing processQuery logic but skip planning
