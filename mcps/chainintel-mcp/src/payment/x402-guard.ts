@@ -69,16 +69,8 @@ export async function verifyPayment(
   paymentData?: any;
 }> {
   try {
-    // Check for API key bypass (for autonomous agent)
-    const apiKey = request.headers.get('x-api-key');
-    const validApiKeys = ['aetheraos-agent-internal']; // Add more as needed
-
-    if (apiKey && validApiKeys.includes(apiKey)) {
-      return {
-        valid: true,
-        paymentData: { method: 'api-key', authenticated: true }
-      };
-    }
+    // ❌ REMOVED API KEY BYPASS - All requests must use x402 payments!
+    // This ensures true agentic economy where all services are paid for
 
     // Get payment data from x-payment header
     const paymentHeader = request.headers.get('x-payment');
@@ -86,7 +78,7 @@ export async function verifyPayment(
     if (!paymentHeader) {
       return {
         valid: false,
-        error: 'No payment provided. Include x-payment header with payment proof or x-api-key for authorized agents.'
+        error: 'No payment provided. Include x-payment header with payment proof from Thirdweb x402.'
       };
     }
 
