@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAccount } from 'wagmi';
+import { ThirdwebProvider } from 'thirdweb/react';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import useThemeStore from './store/theme';
@@ -67,76 +68,78 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <WagmiProvider config={wagmiAdapter.wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <UserProvider>
-            <SyncServiceManager />
-            <Router>
-              <Suspense fallback={<LoadingFallback />}>
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/deploy"
-                    element={
-                      <ProtectedRoute>
-                        <Deploy />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/marketplace"
-                    element={
-                      <ProtectedRoute>
-                        <Marketplace />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/tasks"
-                    element={
-                      <ProtectedRoute>
-                        <Tasks />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/chat"
-                    element={
-                      <ProtectedRoute>
-                        <Chat />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/agent"
-                    element={
-                      <ProtectedRoute>
-                        <AgentChat />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/settings"
-                    element={
-                      <ProtectedRoute>
-                        <Settings />
-                      </ProtectedRoute>
-                    }
-                  />
-                </Routes>
-              </Suspense>
-            </Router>
-          </UserProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
+      <ThirdwebProvider>
+        <WagmiProvider config={wagmiAdapter.wagmiConfig}>
+          <QueryClientProvider client={queryClient}>
+            <UserProvider>
+              <SyncServiceManager />
+              <Router>
+                <Suspense fallback={<LoadingFallback />}>
+                  <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route
+                      path="/dashboard"
+                      element={
+                        <ProtectedRoute>
+                          <Dashboard />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/deploy"
+                      element={
+                        <ProtectedRoute>
+                          <Deploy />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/marketplace"
+                      element={
+                        <ProtectedRoute>
+                          <Marketplace />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/tasks"
+                      element={
+                        <ProtectedRoute>
+                          <Tasks />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/chat"
+                      element={
+                        <ProtectedRoute>
+                          <Chat />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/agent"
+                      element={
+                        <ProtectedRoute>
+                          <AgentChat />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/settings"
+                      element={
+                        <ProtectedRoute>
+                          <Settings />
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Routes>
+                </Suspense>
+              </Router>
+            </UserProvider>
+          </QueryClientProvider>
+        </WagmiProvider>
+      </ThirdwebProvider>
     </ErrorBoundary>
   );
 }

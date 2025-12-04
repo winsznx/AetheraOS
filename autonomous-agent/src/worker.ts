@@ -11,7 +11,7 @@ export interface Env {
   THIRDWEB_CLIENT_ID: string;
   THIRDWEB_SECRET_KEY: string;
   AGENT_PRIVATE_KEY?: string; // Optional: Private key for agent wallet to pay for MCPs
-  PLATFORM_WALLET: string; // Platform wallet to receive user payments
+  SERVER_WALLET: string; // Server wallet to receive user payments (x402)
 }
 
 interface QueryRequest {
@@ -173,7 +173,7 @@ export default {
       // Execute plan endpoint
       if (path === '/execute' && request.method === 'POST') {
         const body = await request.json() as ExecuteRequest;
-        const { plan, paymentProof } = body;
+        const { plan } = body;
 
         if (!plan) {
           return new Response(
@@ -188,41 +188,62 @@ export default {
           );
         }
 
-        // If paymentProof is provided, verify it using x402
-        if (paymentProof) {
-          const { verifyPaymentMiddleware } = await import('./payment/x402-verify');
+        // Import x402 server utilities
+        const { createX402Facilitator, verifyX402Payment, createPaymentRequiredResponse } = await import('./payment/x402-server');
 
-          // Calculate expected price from plan
-          const expectedPrice = plan.totalCost ?
-            plan.totalCost.replace(' ETH', '').trim() :
-            '0.001'; // Default minimum price
+        // Calculate expected price from plan
+        const expectedPrice = plan.totalCost ?
+          plan.totalCost.replace(' ETH', '').trim() :
+          '0.001'; // Default minimum price
 
-          console.log('[Worker] Verifying user payment for plan execution...', {
-            expectedPrice,
-            platform: env.PLATFORM_WALLET
-          });
+        // Create facilitator with server wallet
+        const thirdwebFacilitator = createX402Facilitator(
+          env.THIRDWEB_SECRET_KEY,
+          env.SERVER_WALLET
+        );
 
-          // Verify payment
-          const paymentError = await verifyPaymentMiddleware(
-            request,
-            `${url.origin}${path}`,
-            env.PLATFORM_WALLET,
-            env.THIRDWEB_SECRET_KEY,
-            expectedPrice
-          );
+        console.log('[Worker] Verifying x402 payment...', {
+          expectedPrice,
+          serverWallet: env.SERVER_WALLET
+        });
 
-          if (paymentError) {
-            console.error('[Worker] Payment verification failed');
-            return paymentError;
+        // Verify x402 payment
+        const verification = await verifyX402Payment(
+          request,
+          `${url.origin}${path}`,
+          expectedPrice,
+          thirdwebFacilitator
+        );
+
+        // If payment verification failed, return 402
+        if (!verification.success) {
+          if (verification.status === 402) {
+            console.log('[Worker] Payment required - returning 402 response');
+            return createPaymentRequiredResponse(
+              `${url.origin}${path}`,
+              expectedPrice,
+              env.SERVER_WALLET
+            );
+          } else {
+            return new Response(
+              JSON.stringify({
+                error: verification.error || 'Payment verification failed'
+              }),
+              {
+                status: verification.status,
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...CORS_HEADERS
+                }
+              }
+            );
           }
-
-          console.log('[Worker] Payment verified! Executing plan...');
         }
 
-        // Execute with user payment proof if provided, otherwise use agent wallet
-        const result = paymentProof
-          ? await agent.executePlanWithPayment(plan, paymentProof)
-          : await agent.executePlan(plan);
+        console.log('[Worker] Payment verified! Executing plan...');
+
+        // Execute plan
+        const result = await agent.executePlan(plan);
 
         return new Response(
           JSON.stringify(result, null, 2),

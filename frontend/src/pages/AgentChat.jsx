@@ -235,49 +235,12 @@ export default function AgentChat() {
   /**
    * Handle payment approval - execute plan with user's payment proof
    */
-  const handlePaymentApproved = async (paymentProof) => {
+  const handlePaymentApproved = async (result) => {
     setShowPaymentModal(false);
     setLoading(true);
 
     try {
-      // Show payment confirmation message
-      setMessages(prev => [...prev, {
-        role: 'agent',
-        content: `✅ Payment confirmed! Transaction: ${paymentProof.transactionHash.slice(0, 10)}...\n\nExecuting your query now...`,
-        timestamp: new Date().toISOString()
-      }]);
-
-      // STEP 4: Execute plan with user's x402 payment proof
-      const executeResponse = await fetch(`${AGENT_URL}/execute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-payment': paymentProof.paymentData // x402 payment proof from Thirdweb
-        },
-        body: JSON.stringify({
-          plan: currentPlan,
-          paymentProof: {
-            transactionHash: paymentProof.transactionHash,
-            from: paymentProof.from
-          }
-        })
-      });
-
-      const result = await executeResponse.json();
-
-      if (!executeResponse.ok || !result.success) {
-        const errorMsg = result.report || result.error || 'Execution failed';
-
-        setMessages(prev => [...prev, {
-          role: 'agent',
-          content: errorMsg,
-          timestamp: new Date().toISOString(),
-          isError: true
-        }]);
-
-        setLoading(false);
-        return;
-      }
+      console.log('[AgentChat] Execution result received:', result);
 
       // Show results
       if (result.report) {

@@ -3,7 +3,8 @@
  * HTTP API with x402 payment verification
  */
 
-import { executePaidTool, getPricingInfo } from './payment/x402-guard';
+import { getPricingInfo } from './payment/x402-guard';
+import { createX402Facilitator, verifyX402Payment, createPaymentRequiredResponse } from './payment/x402-server';
 
 // Import API initializers
 import { initMoralis } from './apis/moralis';
@@ -63,11 +64,111 @@ export interface Env {
   ANTHROPIC_API_KEY: string;
   ALCHEMY_API_KEY?: string;
   THIRDWEB_SECRET_KEY: string;
-  PLATFORM_WALLET: string;
+  SERVER_WALLET: string;
   PINATA_API_KEY: string;
   PINATA_SECRET_KEY: string;
   PINATA_JWT: string;
   NETWORK?: 'mainnet' | 'testnet';
+}
+
+// x402 facilitator singleton
+let thirdwebFacilitator: ReturnType<typeof createX402Facilitator> | null = null;
+
+function getOrCreateFacilitator(env: Env) {
+  if (!thirdwebFacilitator) {
+    thirdwebFacilitator = createX402Facilitator(
+      env.THIRDWEB_SECRET_KEY,
+      env.SERVER_WALLET
+    );
+  }
+  return thirdwebFacilitator;
+}
+
+/**
+ * Execute tool with x402 payment verification
+ */
+async function executePaidTool<T>(
+  request: Request,
+  toolName: string,
+  price: string,
+  env: Env,
+  executor: () => Promise<T>
+): Promise<Response> {
+  const url = new URL(request.url);
+  const resourceUrl = url.toString();
+
+  // Get facilitator
+  const facilitator = getOrCreateFacilitator(env);
+
+  // Verify payment
+  const verification = await verifyX402Payment(
+    request,
+    resourceUrl,
+    price,
+    facilitator
+  );
+
+  // If payment required, return 402
+  if (!verification.success) {
+    if (verification.status === 402) {
+      return createPaymentRequiredResponse(
+        resourceUrl,
+        price,
+        env.SERVER_WALLET
+      );
+    } else {
+      return new Response(
+        JSON.stringify({
+          error: verification.error || 'Payment verification failed'
+        }),
+        {
+          status: verification.status,
+          headers: {
+            'Content-Type': 'application/json',
+            ...CORS_HEADERS
+          }
+        }
+      );
+    }
+  }
+
+  // Payment verified - execute tool
+  try {
+    const result = await executor();
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        tool: toolName,
+        result,
+        paid: true,
+        timestamp: Date.now()
+      }),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Payment-Status': 'verified',
+          ...CORS_HEADERS
+        }
+      }
+    );
+  } catch (error: any) {
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+        tool: toolName
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          ...CORS_HEADERS
+        }
+      }
+    );
+  }
 }
 
 let initialized = false;
@@ -198,6 +299,7 @@ export default {
         return await executePaidTool(
           request,
           'analyze-wallet',
+          '0.01', // Price in ETH
           env,
           async () => {
             const body = await request.json();
