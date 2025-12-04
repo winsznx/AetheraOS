@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle, DollarSign } from 'lucide-react';
-import { useActiveAccount } from 'thirdweb/react';
 import { useAccount } from 'wagmi';
 import { createThirdwebClient } from 'thirdweb';
+import { createWalletAdapter } from 'thirdweb/adapters/wagmi';
+import { baseSepolia } from 'thirdweb/chains';
 import { wrapFetchWithPayment } from 'thirdweb/x402';
-import { privateKeyToAccount } from 'thirdweb/wallets';
 import Button from './Button';
 import Card from './Card';
+import { useWalletClient } from 'wagmi';
 
 const THIRDWEB_CLIENT_ID = import.meta.env.VITE_THIRDWEB_CLIENT_ID;
 const AGENT_URL = import.meta.env.VITE_AGENT_URL;
@@ -19,7 +20,7 @@ const client = createThirdwebClient({
 /**
  * Payment Approval Modal
  * Shows plan cost and uses Thirdweb x402 for automatic payment handling
- * Uses Reown connected wallet (via wagmi) for payments
+ * Uses Reown connected wallet (via wagmi adapter)
  */
 export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
   const [isExecuting, setIsExecuting] = useState(false);
@@ -27,6 +28,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
 
   // Get connected account from Reown (wagmi)
   const { address, isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
 
   if (!isOpen || !plan) return null;
 
@@ -36,7 +38,7 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
       setIsExecuting(true);
 
       // Check if user is connected
-      if (!isConnected || !address) {
+      if (!isConnected || !address || !walletClient) {
         throw new Error('Please connect your wallet first');
       }
 
@@ -47,55 +49,25 @@ export default function PaymentModal({ plan, onApprove, onCancel, isOpen }) {
         payerAddress: address
       });
 
-      // Create a payment-enabled fetch using user's connected wallet
-      // This will use the Reown wallet they're already connected with
-      const paymentFetch = async (url, options) => {
-        // First, try the request - if 402 response, handle payment via window.ethereum
-        const initialResponse = await fetch(url, options);
-
-        if (initialResponse.status === 402) {
-          console.log('[PaymentModal] 402 Payment Required - processing payment...');
-
-          const paymentDetails = await initialResponse.json();
-          console.log('[PaymentModal] Payment details:', paymentDetails);
-
-          // Get user to sign and pay via their connected wallet
-          if (!window.ethereum) {
-            throw new Error('No Web3 wallet found');
-          }
-
-          const provider = window.ethereum;
-          const accounts = await provider.request({ method: 'eth_requestAccounts' });
-
-          // Send payment transaction
-          const txHash = await provider.request({
-            method: 'eth_sendTransaction',
-            params: [{
-              from: accounts[0],
-              to: paymentDetails.payment_details?.payTo || paymentDetails.payment_required?.recipient,
-              value: `0x${(parseFloat(paymentDetails.payment_details?.price || '0.001') * 1e18).toString(16)}`
-            }]
-          });
-
-          console.log('[PaymentModal] Payment transaction sent:', txHash);
-
-          // Retry request with payment proof
-          const retryResponse = await fetch(url, {
-            ...options,
-            headers: {
-              ...options.headers,
-              'x-payment': txHash
-            }
-          });
-
-          return retryResponse;
+      // Create Thirdweb wallet adapter from wagmi wallet
+      const thirdwebWallet = createWalletAdapter({
+        client,
+        adaptedAccount: walletClient.account,
+        chain: baseSepolia,
+        onDisconnect: () => {},
+        switchChain: async (chain) => {
+          await walletClient.switchChain({ id: chain.id });
         }
+      });
 
-        return initialResponse;
-      };
+      console.log('[PaymentModal] Created Thirdweb wallet adapter from Reown wallet');
 
-      // Call /execute endpoint with payment handling
-      const result = await paymentFetch(`${AGENT_URL}/execute`, {
+      // Wrap fetch with Thirdweb x402 payment handling
+      // This will automatically handle 402 responses and payment flow
+      const fetchWithPayment = wrapFetchWithPayment(fetch, client, thirdwebWallet);
+
+      // Call /execute endpoint - Thirdweb SDK handles payment automatically
+      const result = await fetchWithPayment(`${AGENT_URL}/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
