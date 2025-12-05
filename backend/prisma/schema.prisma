@@ -220,6 +220,148 @@ model AnalyticsEvent {
   @@index([createdAt])
 }
 
+// Agent Conversation (for autonomous agent chat history)
+model AgentConversation {
+  id          String   @id @default(cuid())
+  
+  // User
+  userId      String   // Wallet address
+  
+  // Conversation details
+  title       String?  // Auto-generated from first message
+  
+  // Metadata
+  metadata    Json?    // Store plan, costs, execution results, etc.
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  messages    AgentMessage[]
+  
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+// Agent Message (individual messages in a conversation)
+model AgentMessage {
+  id              String   @id @default(cuid())
+  
+  // Conversation
+  conversationId  String
+  conversation    AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  // Message data
+  role            String   // 'user' | 'agent' | 'system'
+  content         String   @db.Text
+  
+  // Metadata
+  metadata        Json?    // Store execution results, costs, tool calls, etc.
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+// Marketplace Agent (for agent marketplace)
+model MarketplaceAgent {
+  id          String   @id @default(cuid())
+  
+  // Agent details
+  name        String
+  description String
+  category    String   @default("General")
+  
+  // Creator
+  creator     String   // Wallet address
+  
+  // Endpoint
+  endpoint    String   // Agent URL
+  imageUrl    String?
+  
+  // Pricing
+  price       String   @default("0.0001") // ETH
+  
+  // Stats
+  rating      Float    @default(0)
+  usageCount  Int      @default(0)
+  
+  // Status
+  verified    Boolean  @default(false)
+  status      String   @default("active") // active, inactive
+  
+  // Capabilities
+  capabilities String[]
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  reviews     AgentReview[]
+  
+  @@index([creator])
+  @@index([category])
+  @@index([verified])
+  @@index([rating])
+}
+
+// Agent Review
+model AgentReview {
+  id        String   @id @default(cuid())
+  
+  // Agent
+  agentId   String
+  agent     MarketplaceAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  
+  // User
+  userId    String   // Wallet address
+  
+  // Review
+  rating    Int      // 1-5
+  comment   String?
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  
+  @@index([agentId])
+  @@index([userId])
+  @@unique([agentId, userId]) // One review per user per agent
+}
+
+// Agent Deployment
+model AgentDeployment {
+  id            String   @id @default(cuid())
+  
+  // Deployment details
+  name          String
+  description   String
+  template      String   // Template ID
+  
+  // Configuration
+  config        Json?    // Deployment config
+  
+  // Owner
+  owner         String   // Wallet address
+  
+  // Status
+  status        String   @default("pending") // pending, deploying, deployed, failed, undeployed
+  endpoint      String?  // Deployed URL
+  error         String?  // Error message if failed
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deployedAt    DateTime?
+  undeployedAt  DateTime?
+  
+  @@index([owner])
+  @@index([status])
+}
+
 // Webhook Subscription
 model WebhookSubscription {
   id          String   @id @default(cuid())
