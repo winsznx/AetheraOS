@@ -34,8 +34,8 @@ export default function Landing() {
   };
 
   const handleWatchDemo = () => {
-    // Scroll to how it works section
-    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+    // Open demo video in new tab
+    window.open('https://youtu.be/WY4TBoXP0Xo', '_blank');
   };
 
   const handleStartBuilding = () => {
