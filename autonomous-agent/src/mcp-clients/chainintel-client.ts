@@ -196,6 +196,24 @@ export async function detectWhales(
     addresses?: string[];
   }
 ) {
+  // Use service binding if available
+  if (client.binding) {
+    console.log('[ChainIntelClient] Using service binding to call detect-whales');
+    const response = await client.binding.fetch('http://chainintel-mcp/detect-whales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+      const error: any = await response.json();
+      throw new Error(`ChainIntel detect-whales failed: ${error.error || error.message}`);
+    }
+
+    return await response.json();
+  }
+
+  // Fallback to HTTP
   const response = await client.fetch(`${client.baseUrl}/detect-whales`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -218,9 +236,26 @@ export async function trackSmartMoney(
   params: {
     address: string;
     chain: 'base' | 'ethereum' | 'solana';
-    lookbackDays?: number;
   }
 ) {
+  // Use service binding if available
+  if (client.binding) {
+    console.log('[ChainIntelClient] Using service binding to call smart-money-tracker');
+    const response = await client.binding.fetch('http://chainintel-mcp/smart-money-tracker', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+      const error: any = await response.json();
+      throw new Error(`ChainIntel smart-money-tracker failed: ${error.error || error.message}`);
+    }
+
+    return await response.json();
+  }
+
+  // Fallback to HTTP
   const response = await client.fetch(`${client.baseUrl}/smart-money-tracker`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
