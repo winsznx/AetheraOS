@@ -112,7 +112,28 @@ CRITICAL RULES:
 - Optimize for cost (use cheaper tools when possible)
 - Consider dependencies (some tools need results from others)
 - Be specific with params based on the query - never use placeholder values like "0x..."
-- Return ONLY valid JSON, no markdown formatting`;
+- Return ONLY valid JSON, no markdown formatting
+
+WALLET ADDRESS RULES:
+- ALWAYS copy wallet addresses EXACTLY as provided by the user, character-for-character
+- Ethereum addresses are 42 characters: "0x" + 40 hex characters
+- NEVER truncate, modify, or shorten addresses
+- If an address looks invalid, include it anyway - validation happens later
+- Example: "0xe62D06Db35741813324b7BCB217659C024E00d57" must stay EXACTLY as-is
+
+CHAIN SELECTION RULES:
+- DEFAULT chain is "base" (Base Sepolia testnet) unless user specifies otherwise
+- Only use "ethereum" if user explicitly mentions Ethereum mainnet
+- Only use "solana" if user explicitly mentions Solana
+- For tools that need chain parameter: ALWAYS include it in params
+- For dependent tools (risk-score, trading-patterns, detect-whales): they will auto-populate chain from previous steps, so you can omit the chain param
+
+PARAMETER RULES:
+- analyze-wallet: REQUIRES {"address": "0x...", "chain": "base"}
+- risk-score: REQUIRES {"address": "0x...", "chain": "base"} OR will auto-populate from dependencies
+- trading-patterns: REQUIRES {"address": "0x...", "chain": "base"} OR will auto-populate from dependencies
+- detect-whales: REQUIRES {"chain": "base"} (address is optional)
+- smart-money-tracker: REQUIRES {"address": "0x...", "chain": "base"}`;
 
   const message = await anthropic.messages.create({
     model: 'claude-3-haiku-20240307',

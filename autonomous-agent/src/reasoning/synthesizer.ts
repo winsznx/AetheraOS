@@ -64,6 +64,13 @@ Respond in this exact JSON format:
   ]
 }
 
+IMPORTANT RULES:
+- If the data shows "isTestnet: true" or network contains "Sepolia", DO NOT calculate USD values
+- Testnet ETH has NO real-world value - never convert to USD
+- Always mention the network name (e.g., "Base Sepolia Testnet") in your summary
+- Balance values are already in ETH (not Wei) - use them directly
+- Example: "0.0527 ETH on Base Sepolia Testnet" NOT "$92 worth of ETH"
+
 Be objective and factual. Focus on what the data shows, not assumptions about intent or strategy.`;
 
   const message = await anthropic.messages.create({
