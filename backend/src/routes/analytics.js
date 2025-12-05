@@ -3,6 +3,7 @@ import express from 'express';
 import prisma from '../db.js';
 const router = express.Router();
 
+// POST /api/analytics/events - Track analytics event
 router.post('/events', async (req, res) => {
   try {
     const { eventType, userAddress, data } = req.body;
@@ -53,6 +54,7 @@ function cacheMiddleware(ttlSeconds = 60) {
   };
 }
 
+// GET /api/analytics/events - Get analytics events
 router.get('/events', cacheMiddleware(300), async (req, res) => {
   try {
     const { eventType, userAddress, limit = 100 } = req.query;
@@ -67,6 +69,47 @@ router.get('/events', cacheMiddleware(300), async (req, res) => {
     res.json({ success: true, events });
   } catch (error) {
     logger.error('Error fetching analytics events:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/analytics/user/:address - Get user statistics
+router.get('/user/:address', cacheMiddleware(60), async (req, res) => {
+  try {
+    const { address } = req.params;
+    const userAddress = address.toLowerCase();
+
+    // Get task stats
+    const [totalTasks, activeTasks, completedTasks] = await Promise.all([
+      prisma.task.count({ where: { requester: userAddress } }),
+      prisma.task.count({ where: { requester: userAddress, status: { in: ['OPEN', 'CLAIMED'] } } }),
+      prisma.task.count({ where: { requester: userAddress, status: 'COMPLETED' } })
+    ]);
+
+    // Get agent stats
+    const [totalAgents, activeAgents] = await Promise.all([
+      prisma.agent.count({ where: { owner: userAddress } }),
+      prisma.agent.count({ where: { owner: userAddress, status: 'active' } })
+    ]);
+
+    // Calculate total earnings (sum of all agent revenue)
+    const agentRevenue = await prisma.agent.aggregate({
+      where: { owner: userAddress },
+      _sum: { totalRevenue: true }
+    });
+
+    const stats = {
+      totalTasks,
+      activeTasks,
+      completedTasks,
+      totalAgents,
+      activeAgents,
+      totalEarnings: agentRevenue._sum.totalRevenue || '0'
+    };
+
+    res.json({ success: true, stats });
+  } catch (error) {
+    logger.error('Error fetching user stats:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

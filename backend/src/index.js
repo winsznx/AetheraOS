@@ -34,8 +34,11 @@ import userRoutes from './routes/users.js';
 import taskRoutes from './routes/tasks.js';
 import agentRoutes from './routes/agents.js';
 import chatRoutes from './routes/chat.js';
+import agentChatRoutes from './routes/agent-chat.js';
 import ipfsRoutes from './routes/ipfs.js';
 import analyticsRoutes from './routes/analytics.js';
+import marketplaceRoutes from './routes/marketplace.js';
+import deployRoutes from './routes/deploy.js';
 
 console.log('✅ All routes imported');
 
@@ -155,6 +158,9 @@ app.get('/', (req, res) => {
       tasks: '/api/tasks',
       agents: '/api/agents',
       chat: '/api/chat',
+      agentChat: '/api/agent-chat',
+      marketplace: '/api/marketplace',
+      deploy: '/api/deploy',
       ipfs: '/api/ipfs',
       analytics: '/api/analytics'
     },
@@ -168,6 +174,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/agent-chat', agentChatRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/deploy', deployRoutes);
 app.use('/api/ipfs', ipfsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 console.log('✅ All routes registered');
