@@ -33,19 +33,20 @@ function getClient(): Anthropic {
 export async function generateWalletInsights(walletData: any): Promise<string> {
   const client = getClient();
 
-  const prompt = `Analyze this blockchain wallet data and provide actionable insights:
+  const prompt = `Analyze this blockchain wallet data and provide factual insights:
 
 ${JSON.stringify(walletData, null, 2)}
 
-Please analyze:
-1. Portfolio composition and risk assessment
-2. Trading behavior and patterns
-3. Whether this appears to be "smart money" (experienced trader)
-4. Potential strategies being employed
-5. Risk level (1-10 scale)
-6. Recommendation: FOLLOW, WATCH, or AVOID
+Please provide a neutral, factual analysis covering:
+1. Portfolio composition (tokens, NFTs, native balance)
+2. Transaction activity (volume, frequency, patterns)
+3. Wallet age and activity level
+4. Notable characteristics or behaviors observed
+5. Key metrics and statistics
 
-Be concise and focus on actionable insights for a trader deciding whether to copy this wallet's trades.`;
+Focus on objective facts and observable data. Avoid making assumptions about the wallet owner's intentions, experience level, or trading strategy unless clearly evident from the data.
+
+Be concise and informative.`;
 
   const message = await client.messages.create({
     model: 'claude-3-haiku-20240307',

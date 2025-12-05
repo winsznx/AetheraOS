@@ -24,82 +24,102 @@ export async function initMoralis(apiKey: string) {
 /**
  * Analyze wallet with comprehensive data
  */
-export async function analyzeWallet(address: string, chain: SupportedChain = 'base') {
+export async function analyzeWallet(address: string, chain: SupportedChain = 'base-sepolia') {
   const chainId = CHAIN_IDS[chain];
 
-  // Get wallet transaction history
-  const transactions = await Moralis.EvmApi.transaction.getWalletTransactions({
-    address,
-    chain: chainId,
-    limit: 100,
-    order: 'DESC'
-  });
+  console.log(`[Moralis] Analyzing wallet ${address} on chain ${chain} (${chainId})`);
 
-  // Get token balances
-  const tokens = await Moralis.EvmApi.token.getWalletTokenBalances({
-    address,
-    chain: chainId
-  });
+  try {
+    // Get wallet transaction history
+    console.log('[Moralis] Fetching transactions...');
+    const transactions = await Moralis.EvmApi.transaction.getWalletTransactions({
+      address,
+      chain: chainId,
+      limit: 100,
+      order: 'DESC'
+    });
+    console.log(`[Moralis] Found ${transactions.result.length} transactions`);
 
-  // Get NFTs
-  const nfts = await Moralis.EvmApi.nft.getWalletNFTs({
-    address,
-    chain: chainId,
-    limit: 50
-  });
+    // Get token balances
+    console.log('[Moralis] Fetching token balances...');
+    const tokens = await Moralis.EvmApi.token.getWalletTokenBalances({
+      address,
+      chain: chainId
+    });
+    console.log(`[Moralis] Found ${tokens.result.length} tokens`);
 
-  // Get native balance (ETH/Base)
-  const balance = await Moralis.EvmApi.balance.getNativeBalance({
-    address,
-    chain: chainId
-  });
+    // Get NFTs
+    console.log('[Moralis] Fetching NFTs...');
+    const nfts = await Moralis.EvmApi.nft.getWalletNFTs({
+      address,
+      chain: chainId,
+      limit: 50
+    });
+    console.log(`[Moralis] Found ${nfts.result.length} NFTs`);
 
-  // Calculate portfolio metrics
-  const portfolioValue = calculatePortfolioValue(balance, tokens.result);
-  const tradingActivity = analyzeTradingActivity(transactions.result);
+    // Get native balance (ETH/Base)
+    console.log('[Moralis] Fetching native balance...');
+    const balance = await Moralis.EvmApi.balance.getNativeBalance({
+      address,
+      chain: chainId
+    });
+    console.log(`[Moralis] Native balance: ${balance.result.balance}`);
 
-  return {
-    address,
-    chain,
-    balance: {
-      native: balance.result.balance,
-      nativeSymbol: chain === 'base' ? 'ETH' : 'ETH',
-      tokens: tokens.result.map((token: any) => ({
-        symbol: token.symbol,
-        name: token.name,
-        balance: token.balance,
-        decimals: token.decimals,
-        tokenAddress: token.token_address
-      }))
-    },
-    nfts: {
-      count: nfts.result.length,
-      collections: nfts.result.map((nft: any) => ({
-        name: nft.name,
-        symbol: nft.symbol,
-        tokenId: nft.token_id,
-        contractAddress: nft.token_address
-      }))
-    },
-    transactions: {
-      total: transactions.result.length,
-      recent: transactions.result.slice(0, 10).map((tx: any) => ({
-        hash: tx.hash,
-        from: tx.from_address,
-        to: tx.to_address,
-        value: tx.value,
-        gas: tx.gas_price,
-        timestamp: tx.block_timestamp,
-        success: tx.receipt_status === '1'
-      }))
-    },
-    metrics: {
-      portfolioValue,
-      tradingActivity,
-      isWhale: portfolioValue > 1_000_000, // >$1M
-      activityScore: tradingActivity.score
-    }
-  };
+    // Calculate portfolio metrics
+    const portfolioValue = calculatePortfolioValue(balance, tokens.result);
+    const tradingActivity = analyzeTradingActivity(transactions.result);
+
+    return {
+      address,
+      chain,
+      balance: {
+        native: balance.result.balance,
+        nativeSymbol: chain === 'base' ? 'ETH' : 'ETH',
+        tokens: tokens.result.map((token: any) => ({
+          symbol: token.symbol,
+          name: token.name,
+          balance: token.balance,
+          decimals: token.decimals,
+          tokenAddress: token.token_address
+        }))
+      },
+      nfts: {
+        count: nfts.result.length,
+        collections: nfts.result.map((nft: any) => ({
+          name: nft.name,
+          symbol: nft.symbol,
+          tokenId: nft.token_id,
+          contractAddress: nft.token_address
+        }))
+      },
+      transactions: {
+        total: transactions.result.length,
+        recent: transactions.result.slice(0, 10).map((tx: any) => ({
+          hash: tx.hash,
+          from: tx.from_address,
+          to: tx.to_address,
+          value: tx.value,
+          gas: tx.gas_price,
+          timestamp: tx.block_timestamp,
+          success: tx.receipt_status === '1'
+        }))
+      },
+      metrics: {
+        portfolioValue,
+        tradingActivity,
+        isWhale: portfolioValue > 1_000_000, // >$1M
+        activityScore: tradingActivity.score
+      }
+    };
+  } catch (error: any) {
+    console.error('[Moralis] Error analyzing wallet:', error);
+    console.error('[Moralis] Error details:', {
+      message: error.message,
+      code: error.code,
+      details: error.details
+    });
+    throw new Error(`Moralis API error: ${error.message || 'Unknown error'}`);
+  }
 }
 
 /**
@@ -220,7 +240,7 @@ function analyzeTradingActivity(transactions: any[]): {
   );
 
   const frequency = recentTxs.length > 50 ? 'high' :
-                   recentTxs.length > 10 ? 'medium' : 'low';
+    recentTxs.length > 10 ? 'medium' : 'low';
 
   // Calculate average gas price
   const avgGas = transactions.reduce((sum, tx) =>

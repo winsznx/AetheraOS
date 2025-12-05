@@ -25,7 +25,9 @@ export async function riskScoreTool(input: RiskScoreInput) {
   if (chain === 'solana') {
     walletData = await analyzeSolanaWallet(address);
   } else {
-    walletData = await analyzeMoralis(address, chain);
+    // Map 'base' to 'base-sepolia' for testnet (TODO: make this configurable)
+    const actualChain = chain === 'base' ? 'base-sepolia' : chain;
+    walletData = await analyzeMoralis(address, actualChain as any);
   }
 
   // Get AI-powered risk analysis
