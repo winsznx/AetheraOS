@@ -23,6 +23,24 @@ export interface ExecutionResult {
 }
 
 /**
+ * Tool pricing (in ETH)
+ */
+const TOOL_PRICES: Record<string, number> = {
+  'analyze-wallet': 0.0001,
+  'detect-whales': 0.0001,
+  'smart-money-tracker': 0.0001,
+  'risk-score': 0.0001,
+  'trading-patterns': 0.0001
+};
+
+/**
+ * Get cost for a specific tool
+ */
+function getToolCost(toolName: string): number {
+  return TOOL_PRICES[toolName] || 0.0001; // Default to 0.0001 ETH if not found
+}
+
+/**
  * Execute a plan with payment handling
  */
 export async function executePlan(
@@ -69,18 +87,20 @@ export async function executePlan(
         const result = await executeStep(step, context);
         console.log(`[Executor] Step ${i} completed successfully`);
         context.results.set(i, result);
+
+        // Calculate cost based on tool pricing
+        const stepCost = getToolCost(step.tool);
+        totalCost += stepCost;
+        console.log(`[Executor] Step ${i} cost: ${stepCost} ETH, Total: ${totalCost} ETH`);
+
         results.push({
           step: i,
           mcp: step.mcp,
           tool: step.tool,
           result,
-          success: true
+          success: true,
+          cost: stepCost
         });
-
-        // Track cost (extract from result if available)
-        if (result.cost) {
-          totalCost += parseFloat(result.cost);
-        }
       } catch (error: any) {
         // Use the actual error message without masking
         const errorMsg = error.message;
@@ -195,8 +215,12 @@ function enrichParams(
     const firstDep = results.get(dependencies[0]);
 
     if (firstDep) {
+      // The MCP response structure is: {success: true, result: {...}, tool: "...", ...}
+      // The actual data is in the 'result' field
+      const actualResult = firstDep.result || firstDep;
+
       // Extract wallet info from the result
-      const walletInfo = firstDep.wallet || firstDep.result?.wallet;
+      const walletInfo = actualResult.wallet;
 
       if (walletInfo) {
         // Populate address if missing
@@ -205,10 +229,11 @@ function enrichParams(
           console.log('[Executor] Auto-populated address from dependency:', walletInfo.address);
         }
 
-        // Populate chain if missing
-        if (!enriched.chain && walletInfo.chain) {
-          enriched.chain = walletInfo.chain;
-          console.log('[Executor] Auto-populated chain from dependency:', walletInfo.chain);
+        // Populate chain if missing - try both 'chain' and 'primaryChain'
+        const chain = walletInfo.chain || walletInfo.primaryChain;
+        if (!enriched.chain && chain) {
+          enriched.chain = chain;
+          console.log('[Executor] Auto-populated chain from dependency:', chain);
         }
       }
     }

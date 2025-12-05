@@ -25,7 +25,7 @@ export async function synthesizeResults(
 ): Promise<Synthesis> {
   const anthropic = new Anthropic({ apiKey: anthropicApiKey });
 
-  const prompt = `You are an AI agent synthesizing results from multiple blockchain analysis tools.
+  const prompt = `You are an AI agent synthesizing results from blockchain analysis tools.
 
 Original User Query: "${userQuery}"
 
@@ -38,32 +38,33 @@ ${JSON.stringify(executionResult.results, null, 2)}
 Total Cost: ${executionResult.totalCost} ETH
 Execution Time: ${executionResult.executionTime}ms
 
-Synthesize these results into:
-1. A clear summary answering the user's question
-2. Key findings from the analysis
-3. A specific recommendation (FOLLOW, WATCH, AVOID, or custom)
-4. Confidence level (0-1)
-5. Reasoning behind the recommendation
-6. Optional action items for the user
+Synthesize these results into a clear, factual response:
+1. A concise summary answering the user's question based on the data
+2. Key findings from the analysis (factual observations)
+3. A recommendation ONLY if the user explicitly asked for one (e.g., "should I follow this wallet?")
+   - If no recommendation was requested, use "INFORMATIONAL" as the recommendation
+4. Confidence level (0-1) in the analysis quality
+5. Reasoning explaining the findings
+6. Optional action items if relevant to the query
 
 Respond in this exact JSON format:
 {
-  "summary": "Brief summary answering the user's question",
+  "summary": "Brief factual summary of the wallet/analysis",
   "keyFindings": [
-    "Finding 1",
-    "Finding 2",
-    "Finding 3"
+    "Factual finding 1",
+    "Factual finding 2",
+    "Factual finding 3"
   ],
-  "recommendation": "FOLLOW | WATCH | AVOID | custom recommendation",
+  "recommendation": "INFORMATIONAL | FOLLOW | WATCH | AVOID (only if explicitly asked)",
   "confidence": 0.85,
-  "reasoning": "Detailed reasoning for the recommendation",
+  "reasoning": "Explanation of the findings based on the data",
   "actionItems": [
-    "Action 1",
+    "Action 1 (only if relevant)",
     "Action 2"
   ]
 }
 
-Be specific, actionable, and honest. If data is insufficient, say so.`;
+Be objective and factual. Focus on what the data shows, not assumptions about intent or strategy.`;
 
   const message = await anthropic.messages.create({
     model: 'claude-3-haiku-20240307',
