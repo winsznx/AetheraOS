@@ -64,7 +64,7 @@ export default function Chat() {
     try {
       setLoading(true);
 
-      // Load rooms from backend database
+      // Load rooms from backend database only
       const backendResponse = await getChatRooms(address);
 
       if (backendResponse.success && backendResponse.rooms) {
@@ -74,14 +74,7 @@ export default function Chat() {
           setSelectedRoom(backendResponse.rooms[0]);
         }
       } else {
-        // Fallback to Edenlayer if backend fails
-        console.warn('Backend rooms failed, using Edenlayer fallback');
-        const edenlayerRooms = await listEdenlayerRooms();
-        setRooms(edenlayerRooms);
-
-        if (edenlayerRooms.length > 0 && !selectedRoom) {
-          setSelectedRoom(edenlayerRooms[0]);
-        }
+        setRooms([]);
       }
     } catch (error) {
       console.error('Failed to load rooms:', error);
@@ -157,18 +150,8 @@ export default function Chat() {
     if (!newRoomName.trim() || !address) return;
 
     try {
-      // Create in Edenlayer first
-      const edenlayerRoom = await createEdenlayerRoom({
-        name: newRoomName,
-        type: 'CHAT',
-        description: 'User-created chat room',
-        maxParticipants: 10,
-        private: false
-      });
-
-      // Save to backend database
+      // Create room in backend database only (no Edenlayer for regular chat)
       const backendResponse = await createChatRoom({
-        roomId: edenlayerRoom.id,
         name: newRoomName,
         description: 'User-created chat room',
         type: 'CHAT',
@@ -177,15 +160,18 @@ export default function Chat() {
         participants: [address]
       });
 
-      const room = backendResponse.success ? backendResponse.room : edenlayerRoom;
-
-      setRooms(prev => [room, ...prev]);
-      setSelectedRoom(room);
-      setShowCreateRoom(false);
-      setNewRoomName('');
+      if (backendResponse.success) {
+        const room = backendResponse.room;
+        setRooms(prev => [room, ...prev]);
+        setSelectedRoom(room);
+        setShowCreateRoom(false);
+        setNewRoomName('');
+      } else {
+        throw new Error(backendResponse.error || 'Failed to create room');
+      }
     } catch (error) {
       console.error('Failed to create room:', error);
-      alert('Failed to create room');
+      alert(`Failed to create room: ${error.message}`);
     }
   };
 
