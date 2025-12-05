@@ -53,47 +53,63 @@ export default function Deploy() {
 
     setLoading(true);
     try {
-      // 1. Register agent in Edenlayer with proper MCP schema
-      const agentId = await registerAgent({
-        name: agentConfig.name,
-        description: agentConfig.description,
-        defaultPrompt: `How can ${agentConfig.name} help you today?`,
-        mcpUrl: agentConfig.endpoint,
-        capabilities: {
-          tools: agentConfig.capabilities.map(cap => ({
-            name: cap,
-            description: `Capability: ${cap}`,
-            inputSchema: {
-              type: "object",
-              properties: {},
-              required: []
-            }
-          }))
-        },
-        // Optional fields
-        imageUrl: '',
-        backgroundImageUrl: '',
-        websiteUrl: '',
-        chatUrl: ''
-      });
+      let edenlayerAgentId = null;
+      const hasEdenlayerKey = import.meta.env.VITE_EDENLAYER_API_KEY;
 
-      console.log('Agent registered in Edenlayer:', agentId);
+      // STEP 1: Try to register with Edenlayer (optional)
+      if (hasEdenlayerKey) {
+        try {
+          console.log('Registering agent with Edenlayer...');
+          edenlayerAgentId = await registerAgent({
+            name: agentConfig.name,
+            description: agentConfig.description,
+            defaultPrompt: `How can ${agentConfig.name} help you today?`,
+            mcpUrl: agentConfig.endpoint,
+            capabilities: {
+              tools: agentConfig.capabilities.map(cap => ({
+                name: cap,
+                description: `Capability: ${cap}`,
+                inputSchema: {
+                  type: "object",
+                  properties: {},
+                  required: []
+                }
+              }))
+            },
+            imageUrl: '',
+            backgroundImageUrl: '',
+            websiteUrl: '',
+            chatUrl: ''
+          });
+          console.log('✅ Agent registered in Edenlayer:', edenlayerAgentId);
+        } catch (edenlayerError) {
+          console.warn('⚠️ Edenlayer registration failed (continuing anyway):', edenlayerError.message);
+          // Continue without Edenlayer - not critical
+        }
+      } else {
+        console.log('ℹ️ Skipping Edenlayer registration (no API key)');
+      }
 
-      // 2. Save agent to backend database
+      // STEP 2: Save agent to backend database (required)
+      console.log('Saving agent to backend...');
       const backendAgent = await createAgent({
         name: agentConfig.name,
         description: agentConfig.description,
         endpoint: agentConfig.endpoint,
         owner: address,
-        agentId: agentId,
+        agentId: edenlayerAgentId || `local-${Date.now()}`, // Use local ID if no Edenlayer
         capabilities: agentConfig.capabilities,
         pricingModel: agentConfig.pricingModel,
         priceAmount: agentConfig.priceAmount
       });
 
-      console.log('Agent saved to backend:', backendAgent);
+      if (!backendAgent.success) {
+        throw new Error(backendAgent.error || 'Failed to save agent to database');
+      }
 
-      setDeployedAgentId(agentId);
+      console.log('✅ Agent saved to backend:', backendAgent);
+
+      setDeployedAgentId(edenlayerAgentId || backendAgent.agent?.id);
       setStep(4);
     } catch (error) {
       console.error('Deployment failed:', error);

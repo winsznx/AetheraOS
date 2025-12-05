@@ -1,157 +1,100 @@
-# 🌌 AetheraOS - Operating System for the Agentic Economy
+# AetheraOS 🚀
 
-> **A decentralized operating system for deploying, discovering, and orchestrating autonomous AI agents on the blockchain.**
+> Decentralized AI Agent Platform for Blockchain Intelligence
 
-[![Built with Nullshot](https://img.shields.io/badge/Built%20with-Nullshot-blue)](https://github.com/null-shot/hacks-season-0)
-[![Powered by Thirdweb](https://img.shields.io/badge/Powered%20by-Thirdweb-purple)](https://thirdweb.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Security: Hardened](https://img.shields.io/badge/Security-Hardened-green)](https://github.com/yourusername/AetheraOS)
+[![Nullshot Hacks S0](https://img.shields.io/badge/Nullshot-Hacks%20S0-blue)](https://nullshot.ai)
+[![MCP](https://img.shields.io/badge/MCP-Powered-green)](https://modelcontextprotocol.io)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
----
+**AetheraOS** is a decentralized platform for deploying, discovering, and interacting with autonomous AI agents that provide real-time blockchain intelligence. Built on the Model Context Protocol (MCP) with Claude AI and Thirdweb x402 micropayments.
 
 ## 🎯 What is AetheraOS?
 
-**AetheraOS** is a complete operating system for the agentic economy - a decentralized platform where autonomous AI agents can be deployed, discovered, monetized, and coordinated to perform complex tasks through blockchain-native payments and coordination protocols.
+AetheraOS enables anyone to:
+- **Deploy** custom AI agents with blockchain capabilities
+- **Discover** agents in a decentralized marketplace
+- **Interact** with agents using natural language
+- **Pay** for agent services using x402 micropayments
+- **Earn** by creating and sharing agents
 
-Think of it as **"The App Store for AI Agents"** meets **"Decentralized Uber for AI Work"** - where:
+## ✨ Key Features
 
-- 🤖 **Developers** deploy autonomous AI agents as services
-- 💼 **Users** discover and hire agents to perform tasks
-- 💰 **Payments** flow automatically via blockchain micro-transactions
-- 🔗 **Agents** coordinate with each other to solve complex problems
-- 📊 **Data** is isolated per-wallet with full privacy and ownership
+### 🤖 Autonomous Agent Chat
+- Natural language blockchain queries
+- AI-powered execution planning with Claude 3.5
+- Real-time blockchain data via ChainIntel MCP
+- x402 micropayment integration
 
----
+### 🏪 Agent Marketplace
+- Discover blockchain intelligence agents
+- Reviews and ratings system
+- Filter by capabilities and categories
+- Usage statistics and analytics
 
-## ✨ Core Features
+### 🚀 One-Click Agent Deployment
+- Deploy to Cloudflare Workers
+- Configure pricing (x402 or flat fee)
+- Select capabilities and tools
+- Automatic registration
 
-### 🚀 Agent Marketplace
-- **Deploy AI Agents** - Publish your autonomous agents to the global marketplace
-- **Discover Agents** - Browse available agents by capability, pricing, and reputation
-- **Agent Registry** - Decentralized catalog powered by Edenlayer
-- **Reputation System** - Track agent performance, uptime, and user ratings
+### 🔧 ChainIntel MCP Tools
+- `analyze-wallet`: Comprehensive wallet analysis
+- `detect-whales`: Identify large holders
+- `smart-money-tracker`: Track successful traders
+- `risk-score`: Wallet risk assessment
+- `trading-patterns`: Analyze trading behavior
 
-### 💼 Task Marketplace
-- **Create Tasks** - Post jobs for agents to complete
-- **Task Escrow** - Smart contract-based payments on Base blockchain (Secured with ReentrancyGuard)
-- **Status Tracking** - Real-time task progress monitoring
-- **Multi-Agent Coordination** - Tasks can involve multiple specialized agents
-
-### 💬 Real-Time Communication
-- **Chat Rooms** - Communicate with agents and other users
-- **Agent Conversations** - Persistent AI chat history with full context
-- **WebSocket Support** - Real-time message delivery
-- **Message Persistence** - All conversations saved to backend database
-
-### 👤 User Profiles & Data
-- **Per-Wallet Isolation** - Each wallet has completely separate data
-- **Profile Management** - Custom display names, preferences, settings
-- **Data Persistence** - PostgreSQL backend for reliable storage
-- **Auto-Sync** - Blockchain data automatically synced to database
-
-### 🎨 Modern UI/UX
-- **Responsive Design** - Works on desktop, tablet, and mobile
-- **Dark Mode** - System-wide theme support
-- **Glass Morphism** - Beautiful, modern design language
-- **Resilient UI** - Global Error Boundaries to prevent crashes
-
-### 🔐 Security & Privacy
-- **Wallet Authentication** - Secure middleware verifies wallet signatures for all state-changing actions
-- **End-to-End Encryption** - Secure communication channels
-- **Smart Contract Security** - Reentrancy protection and ownership controls
-- **Data Ownership** - Users own their data, not the platform
-
----
+### 📊 Task Management
+- Create and track agent tasks
+- Real-time status updates
+- Blockchain synchronization
+- Complete task history
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        AetheraOS                            │
-│              Operating System for AI Agents                 │
-└─────────────────────────────────────────────────────────────┘
-                            │
-        ┌───────────────────┼───────────────────┐
-        │                   │                   │
-        ▼                   ▼                   ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐
-│   Frontend   │   │   Backend    │   │  Blockchain  │
-│   (React)    │◀─▶│  (Express)   │◀─▶│    (Base)    │
-└──────────────┘   └──────────────┘   └──────────────┘
-        │                   │                   │
-        │                   ▼                   │
-        │          ┌──────────────┐            │
-        │          │ PostgreSQL   │            │
-        │          │   Database   │            │
-        │          └──────────────┘            │
-        │                                      │
-        └──────────────────┬───────────────────┘
-                           │
-                           ▼
-               ┌───────────────────────┐
-               │   Agent Ecosystem     │
-               ├───────────────────────┤
-               │ • ChainIntel MCP      │
-               │ • Prediction Markets  │
-               │ • Custom Agents       │
-               │ • Multi-Agent Systems │
-               └───────────────────────┘
+┌─────────────────────────────────────────┐
+│         Frontend (React + Vite)         │
+│  Marketplace | Deploy | Chat | Tasks    │
+└────────┬────────────────────────────────┘
+         │
+         ├──► Backend API (Express + PostgreSQL)
+         │    └─► User data, persistence, analytics
+         │
+         ├──► Cloudflare Workers
+         │    ├─► Autonomous Agent (Claude AI)
+         │    └─► ChainIntel MCP (Moralis API)
+         │
+         ├──► Thirdweb
+         │    ├─► Wallet Auth
+         │    └─► x402 Payments
+         │
+         └──► Base Sepolia Testnet
+              └─► On-chain verification
 ```
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **Framework**: React 18 with Vite
-- **Styling**: TailwindCSS + Custom Glass Morphism
-- **Routing**: React Router v6
-- **State Management**: Zustand + Context API
-- **Web3**: wagmi + viem + Thirdweb SDK
-- **Resilience**: Custom Error Boundary & Sync Manager
-- **Build Tool**: Vite with code splitting
-
-### Backend
-- **Runtime**: Node.js + Express.js
-- **Database**: PostgreSQL with Prisma ORM (Singleton Pattern)
-- **Authentication**: Custom Wallet Signature Middleware
-- **API**: RESTful with JSON responses
-- **Security**: Hardened CORS, Rate Limiting, Helmet.js
-- **Optimization**: Transaction-based Syncing
-- **Deployment**: Railway (production-ready)
-
-### Blockchain
-- **Primary Chain**: Base (Ethereum L2)
-- **Smart Contracts**: TaskEscrow (Solidity 0.8.20)
-  - **Security**: OpenZeppelin ReentrancyGuard & Ownable
-- **Wallet Support**: MetaMask, WalletConnect, Coinbase Wallet, 350+ more
-- **Payment Protocol**: x402 micro-payments via Thirdweb
-
-### AI Agents
-- **Framework**: Nullshot MCP Framework
-- **LLM**: Claude 3.5 Sonnet (Anthropic)
-- **Runtime**: Cloudflare Workers (serverless)
-- **Protocol**: Model Context Protocol (MCP)
-- **Type Safety**: Full TypeScript support with custom definitions
-
----
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+
-- PostgreSQL (or Railway/Supabase account)
-- Git
-- Thirdweb account (free)
-- Anthropic API key (free tier available)
 
-### 1. Clone the Repository
+- Node.js 18+ and npm
+- PostgreSQL database
+- Cloudflare account (for Workers)
+- API Keys:
+  - Anthropic (Claude AI)
+  - Moralis (Blockchain data)
+  - Thirdweb (Web3 infrastructure)
+
+### Installation
+
+#### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/yourusername/AetheraOS.git
 cd AetheraOS
 ```
 
-### 2. Set Up Backend
+#### 2. Setup Backend
 
 ```bash
 cd backend
@@ -159,158 +102,279 @@ cd backend
 # Install dependencies
 npm install
 
-# Configure environment
+# Create .env file
 cp .env.example .env
-# Edit .env with your DATABASE_URL and other settings
 
-# Initialize database
-npm run db:push
+# Edit .env with your values:
+# DATABASE_URL=postgresql://user:password@localhost:5432/aetheraos
+# FRONTEND_URL=http://localhost:5173
+# ALLOWED_ORIGINS=http://localhost:5173
 
-# Start backend server
+# Run migrations
+npx prisma migrate dev
+
+# Generate Prisma client
+npx prisma generate
+
+# Start backend
 npm run dev
-# Backend runs on http://localhost:3000
 ```
 
-### 3. Set Up Frontend
+Backend will run on `http://localhost:3000`
+
+#### 3. Setup Frontend
 
 ```bash
-cd frontend
+cd ../frontend
 
 # Install dependencies
 npm install
 
-# Configure environment
+# Create .env file
 cp .env.example .env
-# Edit .env with API URLs and keys
 
-# Start development server
+# Edit .env with your values:
+# VITE_API_URL=http://localhost:3000/api
+# VITE_AGENT_URL=https://your-agent.workers.dev
+# VITE_THIRDWEB_CLIENT_ID=your_client_id
+
+# Start frontend
 npm run dev
-# Frontend runs on http://localhost:5173
 ```
 
-### 4. Deploy Agents (Optional)
+Frontend will run on `http://localhost:5173`
 
-**ChainIntel MCP:**
+#### 4. Deploy Autonomous Agent (Cloudflare Workers)
+
 ```bash
-cd mcps/chainintel-mcp
-npm install
-cp .env.example .env
-# Add API keys
+cd ../autonomous-agent
 
-# Deploy to Cloudflare
-npm run deploy
+# Install dependencies
+npm install
+
+# Create wrangler.toml
+cp wrangler.toml.example wrangler.toml
+
+# Edit wrangler.toml with your account details
+
+# Set secrets
+npx wrangler secret put ANTHROPIC_API_KEY
+npx wrangler secret put SERVER_WALLET
+
+# Deploy
+npx wrangler deploy
 ```
 
-**Autonomous Agent:**
+#### 5. Deploy ChainIntel MCP (Cloudflare Workers)
+
 ```bash
-cd autonomous-agent
-npm install
-cp .env.example .env
-# Add API keys
+cd ../mcps/chainintel-mcp
 
-# Deploy to Cloudflare
-npm run deploy
+# Install dependencies
+npm install
+
+# Set secrets
+npx wrangler secret put MORALIS_API_KEY
+npx wrangler secret put ANTHROPIC_API_KEY
+
+# Deploy
+npx wrangler deploy
 ```
 
-### 5. Open in Browser
+## 🔧 Environment Variables
 
-Navigate to `http://localhost:5173` and connect your wallet!
+### Backend (.env)
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/aetheraos
+NODE_ENV=development
+PORT=3000
+FRONTEND_URL=http://localhost:5173
+ALLOWED_ORIGINS=http://localhost:5173
+```
 
----
+### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:3000/api
+VITE_AGENT_URL=https://your-agent.workers.dev
+VITE_THIRDWEB_CLIENT_ID=your_thirdweb_client_id
+```
 
-## 🔒 Security Measures
+### Autonomous Agent (Cloudflare Secrets)
+```env
+ANTHROPIC_API_KEY=your_claude_api_key
+CHAININTEL_URL=https://chainintel-mcp.workers.dev
+SERVER_WALLET=0x...
+```
 
-We take security seriously. Recent hardening includes:
+### ChainIntel MCP (Cloudflare Secrets)
+```env
+MORALIS_API_KEY=your_moralis_api_key
+ANTHROPIC_API_KEY=your_claude_api_key
+NETWORK=testnet
+```
 
-1.  **Smart Contracts**:
-    *   Implemented `ReentrancyGuard` on all payment functions.
-    *   Added `Ownable` for administrative controls (e.g., platform wallet updates).
-    *   Follows Checks-Effects-Interactions pattern.
+## 📖 Usage Guide
 
-2.  **Backend API**:
-    *   **Authentication**: All write operations (`POST`, `PUT`, `DELETE`) require a valid wallet signature.
-    *   **Database**: Uses a Singleton Prisma Client to manage connection pools efficiently.
-    *   **Rate Limiting**: Applied to all API routes to prevent abuse.
-    *   **CORS**: Restricted to trusted origins in production.
+### 1. Connect Wallet
+- Click "Connect Wallet" in the navigation
+- Approve connection with your Web3 wallet
+- Switch to Base Sepolia testnet
 
-3.  **Frontend**:
-    *   **Error Boundaries**: Catches component crashes to prevent white screens.
-    *   **Sanitization**: Inputs validated with Zod schemas.
+### 2. Chat with Agent
+- Navigate to "AI Agent" page
+- Ask a blockchain question (e.g., "Analyze wallet 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb4")
+- Review the execution plan and cost
+- Approve x402 payment
+- View real-time results
 
----
+### 3. Deploy Your Agent
+- Go to "Deploy Agent" page
+- Fill in agent details (name, description, endpoint)
+- Select capabilities
+- Configure pricing
+- Deploy to Cloudflare Workers
 
-## 📖 Key Concepts
+### 4. Browse Marketplace
+- Visit "Marketplace" page
+- Search and filter agents
+- View agent details and reviews
+- Click to interact with agents
 
-### What is an Agent?
-An **agent** is an autonomous AI program that can:
-- Understand natural language requests
-- Plan multi-step solutions
-- Execute blockchain transactions
-- Call external APIs and tools
-- Coordinate with other agents
-- Return structured results
+### 5. Manage Tasks
+- Navigate to "Tasks" page
+- Create new tasks for agents
+- Track execution status
+- View task history
 
-### What is MCP (Model Context Protocol)?
-**MCP** is a standard protocol for AI agents to discover and use tools - like USB for AI. Agents can:
-- Discover available tools
-- Understand tool capabilities
-- Execute tools with type-safe parameters
-- Handle payments automatically
+## 🧪 Testing
 
-### What is x402?
-**x402** is a micro-payment protocol that enables:
-- Pay-per-call API pricing
-- Automatic crypto payments
-- No subscriptions needed
-- Transparent cost structure
+### Backend Tests
+```bash
+cd backend
+npm test
+```
 
----
+### Frontend Tests
+```bash
+cd frontend
+npm test
+```
+
+### E2E Tests
+```bash
+npm run test:e2e
+```
+
+## 📁 Project Structure
+
+```
+AetheraOS/
+├── frontend/                 # React frontend
+│   ├── src/
+│   │   ├── pages/           # Page components
+│   │   ├── components/      # Reusable components
+│   │   ├── lib/             # API clients
+│   │   └── store/           # State management
+│   └── package.json
+│
+├── backend/                  # Express backend
+│   ├── src/
+│   │   ├── routes/          # API routes
+│   │   ├── middleware/      # Express middleware
+│   │   └── utils/           # Utilities
+│   ├── prisma/              # Database schema
+│   └── package.json
+│
+├── autonomous-agent/         # Cloudflare Worker
+│   ├── src/
+│   │   ├── reasoning/       # AI planning & synthesis
+│   │   ├── orchestrator/    # Execution engine
+│   │   ├── payment/         # x402 integration
+│   │   └── mcp-clients/     # MCP client
+│   └── wrangler.toml
+│
+└── mcps/
+    └── chainintel-mcp/      # ChainIntel MCP Server
+        ├── src/
+        │   ├── apis/        # Moralis & Claude
+        │   └── tools/       # MCP tools
+        └── wrangler.toml
+```
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **React** - UI framework
+- **Vite** - Build tool
+- **Thirdweb** - Web3 SDK
+- **Wagmi** - React hooks for Ethereum
+- **TailwindCSS** - Styling
+
+### Backend
+- **Express** - Web framework
+- **PostgreSQL** - Database
+- **Prisma** - ORM
+- **Socket.IO** - Real-time communication
+
+### Workers
+- **Cloudflare Workers** - Serverless compute
+- **Claude 3.5 Sonnet** - AI reasoning
+- **Moralis API** - Blockchain data
+- **Thirdweb x402** - Micropayments
+
+## 🎬 Demo Video
+
+[Watch the 4-minute demo](https://youtube.com/...)
+
+## 📚 Documentation
+
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [API Reference](docs/API.md)
+- [MCP Integration](docs/MCP.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
 
 ## 🤝 Contributing
 
-We welcome contributions! Here's how:
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) first.
 
-1.  **Fork the Repository**
-2.  **Create a Feature Branch** (`git checkout -b feature/amazing-feature`)
-3.  **Commit your Changes** (`git commit -m 'Add some amazing feature'`)
-4.  **Push to the Branch** (`git push origin feature/amazing-feature`)
-5.  **Open a Pull Request**
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
----
+## 📝 License
 
-## 📜 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-MIT License - see [LICENSE](LICENSE) file for details.
+## 🏆 Nullshot Hacks S0
 
----
+This project is submitted for **Nullshot Hacks S0** competition.
+
+**Track**: 1a - Brainstorm Submission  
+**Tags**: `Nullshot Hacks S0`, `MCP`, `AI Agents`, `Web3`
+
+## 🔗 Links
+
+- **Live Demo**: https://aethera-os.vercel.app
+- **Backend API**: https://aetheraos-backend.railway.app
+- **Autonomous Agent**: https://aetheraos-autonomous-agent.workers.dev
+- **ChainIntel MCP**: https://chainintel-mcp.workers.dev
+
+## 👥 Team
+
+Built by a solo developer passionate about decentralized AI and Web3.
 
 ## 🙏 Acknowledgments
 
-**Built with:**
-- [Nullshot Framework](https://github.com/null-shot/typescript-agent-framework) - Agent orchestration
-- [Thirdweb](https://thirdweb.com) - Web3 infrastructure & x402 payments
-- [Anthropic Claude](https://anthropic.com) - AI reasoning
-- [Edenlayer](https://edenlayer.io) - Decentralized MCP registry
-- [Base](https://base.org) - Ethereum L2 blockchain
-- [Cloudflare Workers](https://workers.cloudflare.com) - Serverless agent runtime
-- [Prisma](https://prisma.io) - Database ORM
-- [React](https://react.dev) - UI framework
-- [TailwindCSS](https://tailwindcss.com) - Styling
+- **Nullshot** for hosting the hackathon
+- **Anthropic** for Claude AI
+- **Thirdweb** for Web3 infrastructure
+- **Moralis** for blockchain data
+- **Cloudflare** for Workers platform
 
 ---
 
-<div align="center">
+**Built with ❤️ for Nullshot Hacks S0**
 
-### 🌟 Star us on GitHub!
-
-**Built for the future of autonomous AI agents on the blockchain.**
-
-[🚀 Get Started](#-quick-start) · [📖 Docs](/docs) · [🤝 Contribute](#-contributing)
-
----
-
-**AetheraOS** - Operating System for the Agentic Economy
-
-*Empowering the next generation of decentralized AI*
-
-</div>
+*Where AI Meets Blockchain Intelligence*
