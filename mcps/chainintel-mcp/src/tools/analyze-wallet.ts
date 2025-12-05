@@ -46,7 +46,9 @@ export async function analyzeWalletTool(input: AnalyzeWalletInput) {
     }
   } else {
     // EVM analysis (Base or Ethereum)
-    primaryData = await analyzeMoralis(address, chain);
+    // Map 'base' to 'base-sepolia' for testnet (TODO: make this configurable)
+    const actualChain = chain === 'base' ? 'base-sepolia' : chain;
+    primaryData = await analyzeMoralis(address, actualChain as any);
 
     // If cross-chain requested, also check Solana
     if (includeCrossChain) {

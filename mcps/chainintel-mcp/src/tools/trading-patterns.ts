@@ -26,7 +26,9 @@ export async function tradingPatternsTool(input: TradingPatternsInput) {
   if (chain === 'solana') {
     transactions = await getSolanaTransactions(address, 100);
   } else {
-    transactions = await getWalletHistory(address, chain, 100);
+    // Map 'base' to 'base-sepolia' for testnet (TODO: make this configurable)
+    const actualChain = chain === 'base' ? 'base-sepolia' : chain;
+    transactions = await getWalletHistory(address, actualChain as any, 100);
   }
 
   // Check if enough trades
@@ -107,9 +109,9 @@ function calculateTradingPatterns(transactions: any[], chain: string) {
 
   const timePreference =
     Number(mostActiveHour) >= 6 && Number(mostActiveHour) < 12 ? 'Morning trader' :
-    Number(mostActiveHour) >= 12 && Number(mostActiveHour) < 18 ? 'Afternoon trader' :
-    Number(mostActiveHour) >= 18 && Number(mostActiveHour) < 24 ? 'Evening trader' :
-    'Night trader';
+      Number(mostActiveHour) >= 12 && Number(mostActiveHour) < 18 ? 'Afternoon trader' :
+        Number(mostActiveHour) >= 18 && Number(mostActiveHour) < 24 ? 'Evening trader' :
+          'Night trader';
 
   // Calculate unique trading days
   const dates = transactions
@@ -132,8 +134,8 @@ function calculateTradingPatterns(transactions: any[], chain: string) {
 
   const preferredSize =
     avgValue > 1e18 ? 'Large positions' : // >1 ETH
-    avgValue > 1e17 ? 'Medium positions' : // >0.1 ETH
-    'Small positions';
+      avgValue > 1e17 ? 'Medium positions' : // >0.1 ETH
+        'Small positions';
 
   return {
     timePreference,
