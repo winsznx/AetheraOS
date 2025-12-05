@@ -69,12 +69,25 @@ export async function analyzeWallet(address: string, chain: SupportedChain = 'ba
     const portfolioValue = calculatePortfolioValue(balance, tokens.result);
     const tradingActivity = analyzeTradingActivity(transactions.result);
 
+    // Convert Wei to ETH (1 ETH = 10^18 Wei)
+    const nativeBalanceWei = BigInt(balance.result.balance);
+    const nativeBalanceEth = Number(nativeBalanceWei) / 1e18;
+
+    // Determine network name
+    const networkName = chain === 'base-sepolia' ? 'Base Sepolia Testnet' :
+      chain === 'base' ? 'Base Mainnet' :
+        chain === 'ethereum' ? 'Ethereum Mainnet' :
+          chain;
+
     return {
       address,
       chain,
+      network: networkName,
       balance: {
-        native: balance.result.balance,
-        nativeSymbol: chain === 'base' ? 'ETH' : 'ETH',
+        native: nativeBalanceEth.toString(), // ETH value as string
+        nativeWei: balance.result.balance, // Original Wei value
+        nativeSymbol: 'ETH',
+        isTestnet: chain.includes('sepolia'),
         tokens: tokens.result.map((token: any) => ({
           symbol: token.symbol,
           name: token.name,
