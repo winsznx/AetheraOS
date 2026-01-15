@@ -3,7 +3,7 @@
  * Standardizes real-time event emission across the application
  */
 
-import { io } from '../index.js';
+import { getSocketIO } from './socketio.js';
 
 export const EventTypes = {
     // Task Events
@@ -30,6 +30,7 @@ export const EventTypes = {
  * @param {Object} data - Payload data
  */
 export const emitTaskEvent = (taskId, type, data) => {
+    const io = getSocketIO();
     if (!io) return;
 
     // Emit to specific task room (if anyone is watching this task)
@@ -52,6 +53,7 @@ export const emitTaskEvent = (taskId, type, data) => {
  * @param {Object} data - Payload data
  */
 export const emitAgentEvent = (agentId, type, data) => {
+    const io = getSocketIO();
     if (!io) return;
 
     io.to(`agent:${agentId}`).emit('message', {
@@ -71,6 +73,7 @@ export const emitAgentEvent = (agentId, type, data) => {
  * @param {Object} notification - Notification data
  */
 export const emitUserEvent = (userId, notification) => {
+    const io = getSocketIO();
     if (!io) return;
 
     io.to(`user:${userId.toLowerCase()}`).emit('message', {
@@ -85,6 +88,7 @@ export const emitUserEvent = (userId, notification) => {
  * @param {Object} data - Payload data
  */
 export const emitSystemEvent = (type, data) => {
+    const io = getSocketIO();
     if (!io) return;
 
     io.to('system:global').emit('message', {
