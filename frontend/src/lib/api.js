@@ -165,12 +165,13 @@ export async function getTaskByBlockchainId(taskId) {
  * Update task (sync from blockchain)
  * @param {string} id - Task database ID
  * @param {Object} updates - Task updates
+ * @param {Object} signer - Optional signer for authenticated updates
  */
-export async function updateTask(id, updates) {
+export async function updateTask(id, updates, signer = null) {
   return apiRequest(`/tasks/${id}`, {
     method: 'PUT',
     body: JSON.stringify(updates)
-  });
+  }, signer);
 }
 
 /**
@@ -187,11 +188,12 @@ export async function syncTasks(tasks) {
 /**
  * Delete/cancel task
  * @param {string} id - Task database ID
+ * @param {Object} signer - Signer for authentication
  */
-export async function deleteTask(id) {
+export async function deleteTask(id, signer) {
   return apiRequest(`/tasks/${id}`, {
     method: 'DELETE'
-  });
+  }, signer);
 }
 
 // ============================================
@@ -253,11 +255,12 @@ export async function trackAgentCall(id, revenue) {
 /**
  * Delete/deactivate agent
  * @param {string} id - Agent database ID
+ * @param {Object} signer - Signer for authentication
  */
-export async function deleteAgent(id) {
+export async function deleteAgent(id, signer) {
   return apiRequest(`/agents/${id}`, {
     method: 'DELETE'
-  });
+  }, signer);
 }
 
 // ============================================

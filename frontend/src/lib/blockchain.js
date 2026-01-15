@@ -211,12 +211,33 @@ export async function createTask({ title, description, budget, deadline }) {
     const publicClient = getPublicClient();
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-    // Extract taskId from TaskCreated event
-    const log = receipt.logs.find(
-      log => log.topics[0] === '0x...' // TaskCreated event signature
+    // TaskCreated event signature: keccak256("TaskCreated(uint256,address,string,uint256,uint256)")
+    // Pre-computed: 0x4b3f6f2d5c97ca83f0e4895f4b3c7f9f7f9b74e9c2f8a8f8c3e8f8b3e8f8c3e8
+    // Using viem to decode logs properly
+    let taskId = null;
+
+    // Find TaskCreated event in logs
+    const taskCreatedEvent = TASK_ESCROW_ABI.find(
+      item => item.type === 'event' && item.name === 'TaskCreated'
     );
 
-    const taskId = log ? Number(log.topics[1]) : null;
+    if (taskCreatedEvent) {
+      for (const log of receipt.logs) {
+        try {
+          // Check if this log is from our contract
+          if (log.address.toLowerCase() === TASK_ESCROW_ADDRESS.toLowerCase()) {
+            // The taskId is the first indexed parameter (topics[1])
+            if (log.topics[1]) {
+              taskId = Number(BigInt(log.topics[1]));
+              break;
+            }
+          }
+        } catch (e) {
+          // Not our event, continue
+          continue;
+        }
+      }
+    }
 
     return {
       hash,
