@@ -1,20 +1,36 @@
 {
   "name": "aetheraos",
   "version": "1.0.0",
+  "private": true,
   "description": "AetheraOS is the Operating System for the Agentic Economy — a unified platform for deploying, discovering, and monetizing autonomous AI agents",
-  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:backend": "pnpm --filter aetheraos-backend dev",
+    "build:frontend": "pnpm --filter frontend build",
+    "build:contracts": "cd contracts && npx hardhat compile",
+    "test:contracts": "cd contracts && npx hardhat test",
+    "deploy:contracts": "cd contracts && npx hardhat run scripts/deploy.js --network baseSepolia",
+    "lint": "pnpm --filter frontend lint",
+    "format": "pnpm --filter frontend format"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/winsznx/AetheraOS.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "ai",
+    "agents",
+    "blockchain",
+    "mcp",
+    "autonomous"
+  ],
+  "author": "AetheraOS Team",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/winsznx/AetheraOS/issues"
   },
-  "homepage": "https://github.com/winsznx/AetheraOS#readme"
+  "homepage": "https://github.com/winsznx/AetheraOS#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
