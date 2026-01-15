@@ -6,6 +6,7 @@
 import express from 'express';
 import prisma from '../db.js';
 import { z } from 'zod';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -60,11 +61,12 @@ router.get('/templates', async (req, res) => {
 });
 
 // POST /api/deploy/agents - Deploy new agent
-router.post('/agents', async (req, res) => {
+router.post('/agents', authenticate, async (req, res) => {
     try {
-        const { name, description, template, config, owner } = DeployAgentSchema.extend({
-            owner: z.string()
-        }).parse(req.body);
+        const { name, description, template, config } = DeployAgentSchema.parse(req.body);
+
+        // Use authenticated user as owner
+        const owner = req.user.address;
 
         // Create deployment record
         const deployment = await prisma.agentDeployment.create({
@@ -182,7 +184,7 @@ router.get('/agents', async (req, res) => {
 });
 
 // DELETE /api/deploy/agents/:id - Undeploy agent
-router.delete('/agents/:id', async (req, res) => {
+router.delete('/agents/:id', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -194,6 +196,14 @@ router.delete('/agents/:id', async (req, res) => {
             return res.status(404).json({
                 success: false,
                 error: 'Deployment not found'
+            });
+        }
+
+        // Verify ownership
+        if (deployment.owner !== req.user.address) {
+            return res.status(403).json({
+                success: false,
+                error: 'Unauthorized: You can only undeploy your own agents'
             });
         }
 

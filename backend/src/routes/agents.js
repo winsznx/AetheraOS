@@ -7,8 +7,21 @@ import express from 'express';
 import prisma from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { emitAgentEvent, EventTypes } from '../utils/events.js';
+import { z } from 'zod';
 
 const router = express.Router();
+
+// Validation schema for creating an agent
+const CreateAgentSchema = z.object({
+  name: z.string().min(2).max(100).trim(),
+  description: z.string().min(10).max(2000).trim(),
+  endpoint: z.string().url(),
+  agentId: z.string().optional(),
+  imageUrl: z.string().url().optional().or(z.literal('')).or(z.literal(null)),
+  capabilities: z.array(z.string()).optional(),
+  pricingModel: z.enum(['x402', 'flat']).optional(),
+  priceAmount: z.string().regex(/^\d+(\.\d{1,18})?$/, 'Invalid price format').optional()
+});
 
 /**
  * GET /api/agents
@@ -56,44 +69,23 @@ router.get('/', async (req, res) => {
  */
 router.post('/', authenticate, async (req, res) => {
   try {
-    const {
-      name,
-      description,
-      endpoint,
-      owner,
-      agentId,
-      imageUrl,
-      capabilities,
-      pricingModel,
-      priceAmount
-    } = req.body;
+    // Validate input
+    const validatedData = CreateAgentSchema.parse(req.body);
 
-    if (!name || !description || !endpoint || !owner) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields: name, description, endpoint, owner'
-      });
-    }
-
-    // Ensure owner matches authenticated user
-    if (req.user.address !== owner.toLowerCase()) {
-      return res.status(403).json({
-        success: false,
-        error: 'Unauthorized: Owner must match authenticated user'
-      });
-    }
+    // Use authenticated user as owner
+    const owner = req.user.address;
 
     const agent = await prisma.agent.create({
       data: {
-        name,
-        description,
-        endpoint,
+        name: validatedData.name,
+        description: validatedData.description,
+        endpoint: validatedData.endpoint,
         owner: owner.toLowerCase(),
-        agentId,
-        imageUrl,
-        capabilities: capabilities || [],
-        pricingModel: pricingModel || 'x402',
-        priceAmount: priceAmount || '0.01',
+        agentId: validatedData.agentId,
+        imageUrl: validatedData.imageUrl || null,
+        capabilities: validatedData.capabilities || [],
+        pricingModel: validatedData.pricingModel || 'x402',
+        priceAmount: validatedData.priceAmount || '0.01',
         status: 'active'
       }
     });
@@ -105,6 +97,14 @@ router.post('/', authenticate, async (req, res) => {
       agent
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: error.errors
+      });
+    }
+
     console.error('Error creating agent:', error);
     res.status(500).json({
       success: false,

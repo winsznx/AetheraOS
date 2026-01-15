@@ -6,6 +6,7 @@
 import express from 'express';
 import prisma from '../db.js';
 import { z } from 'zod';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -87,18 +88,28 @@ router.get('/agents/:id', async (req, res) => {
 });
 
 // POST /api/marketplace/agents - Create marketplace agent
-router.post('/agents', async (req, res) => {
+router.post('/agents', authenticate, async (req, res) => {
     try {
         const {
             name,
             description,
             category,
-            creator,
             endpoint,
             price,
             imageUrl,
             capabilities
         } = req.body;
+
+        // Validate required fields
+        if (!name || !description || !endpoint) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields: name, description, endpoint'
+            });
+        }
+
+        // Use authenticated user as creator
+        const creator = req.user.address;
 
         const agent = await prisma.marketplaceAgent.create({
             data: {
@@ -140,10 +151,30 @@ router.post('/agents/:id/use', async (req, res) => {
 });
 
 // POST /api/marketplace/agents/:id/reviews - Add review
-router.post('/agents/:id/reviews', async (req, res) => {
+router.post('/agents/:id/reviews', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
-        const { userId, rating, comment } = ReviewSchema.parse(req.body);
+        const { rating, comment } = ReviewSchema.parse(req.body);
+
+        // Use authenticated user as reviewer
+        const userId = req.user.address;
+
+        // Verify agent exists
+        const agent = await prisma.marketplaceAgent.findUnique({ where: { id } });
+        if (!agent) {
+            return res.status(404).json({
+                success: false,
+                error: 'Agent not found'
+            });
+        }
+
+        // Prevent self-reviews
+        if (agent.creator === userId) {
+            return res.status(400).json({
+                success: false,
+                error: 'You cannot review your own agent'
+            });
+        }
 
         // Check if user already reviewed
         const existing = await prisma.agentReview.findFirst({
