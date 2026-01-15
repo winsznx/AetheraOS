@@ -224,6 +224,7 @@ process.on('SIGINT', async () => {
 
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { setSocketIO } from './utils/socketio.js';
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -233,6 +234,9 @@ const io = new Server(httpServer, {
     credentials: true
   }
 });
+
+// Register socket.io instance for use by event utilities
+setSocketIO(io);
 
 // Socket.io connection handler
 io.on('connection', (socket) => {
@@ -283,3 +287,4 @@ try {
 }
 
 export { prisma, io };
+
