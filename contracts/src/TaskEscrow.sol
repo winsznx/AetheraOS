@@ -134,6 +134,12 @@ contract TaskEscrow is ReentrancyGuard, Ownable {
         address indexed newWallet
     );
 
+    event EmergencyWithdraw(
+        uint256 indexed taskId,
+        address indexed requester,
+        uint256 amount
+    );
+
     constructor(address _platformWallet) {
         require(_platformWallet != address(0), "Invalid platform wallet");
         platformWallet = _platformWallet;
@@ -197,6 +203,7 @@ contract TaskEscrow is ReentrancyGuard, Ownable {
         require(task.status == TaskStatus.OPEN, "Task is not open");
         require(task.worker == address(0), "Task already claimed");
         require(msg.sender != task.requester, "Requester cannot claim own task");
+        require(block.timestamp < task.deadline, "Task deadline has passed");
 
         task.worker = msg.sender;
         task.status = TaskStatus.CLAIMED;
@@ -313,5 +320,7 @@ contract TaskEscrow is ReentrancyGuard, Ownable {
 
         (bool success, ) = task.requester.call{value: task.budget}("");
         require(success, "Refund failed");
+
+        emit EmergencyWithdraw(taskId, task.requester, task.budget);
     }
 }
