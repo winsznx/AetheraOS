@@ -3,21 +3,44 @@ import logger from './logger.js';
 
 let redisClient = null;
 
-// Only create Redis client if REDIS_URL is provided
-if (process.env.REDIS_URL) {
-    redisClient = createClient({
-        url: process.env.REDIS_URL
-    });
+/**
+ * Initialize Redis client
+ * Uses async IIFE to safely handle connection
+ */
+async function initRedis() {
+    if (!process.env.REDIS_URL) {
+        logger.warn('Redis is disabled - REDIS_URL not configured');
+        return null;
+    }
 
-    redisClient.on('error', (err) => logger.error('Redis Client Error', err));
-    redisClient.on('connect', () => logger.info('Redis Client Connected'));
+    try {
+        const client = createClient({
+            url: process.env.REDIS_URL
+        });
 
-    await redisClient.connect().catch((error) => {
+        client.on('error', (err) => logger.error('Redis Client Error', err));
+        client.on('connect', () => logger.info('Redis Client Connected'));
+
+        await client.connect();
+        return client;
+    } catch (error) {
         logger.error('Failed to connect to Redis:', error);
-        redisClient = null; // Disable Redis if connection fails
-    });
-} else {
-    logger.warn('Redis is disabled - REDIS_URL not configured');
+        return null; // Disable Redis if connection fails
+    }
+}
+
+// Initialize Redis (best effort - won't crash if it fails)
+(async () => {
+    redisClient = await initRedis();
+})();
+
+/**
+ * Get Redis client instance
+ * @returns {Object|null} Redis client or null if not available
+ */
+export function getRedisClient() {
+    return redisClient;
 }
 
 export default redisClient;
+
