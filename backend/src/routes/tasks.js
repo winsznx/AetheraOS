@@ -207,9 +207,58 @@ router.put('/:id', authenticate, async (req, res) => {
       completedAt
     } = req.body;
 
-    // TODO: Add strict ownership check here depending on what is being updated
-    // For now, we assume if you are authenticated you can update (e.g. worker claiming)
-    // In a real app, we'd check if msg.sender is the worker or requester
+    // Fetch existing task for authorization check
+    const existingTask = await prisma.task.findUnique({ where: { id } });
+
+    if (!existingTask) {
+      return res.status(404).json({
+        success: false,
+        error: 'Task not found'
+      });
+    }
+
+    // Authorization check based on operation type
+    const userAddress = req.user.address;
+    const isRequester = existingTask.requester === userAddress;
+    const isWorker = existingTask.worker === userAddress;
+    const isClaimingTask = worker && !existingTask.worker;
+
+    // Determine allowed operations
+    // - Requester can: verify work (change status to VERIFIED/DISPUTED/COMPLETED)
+    // - Worker can: submit work (add proofHash, change status to SUBMITTED)
+    // - Anyone can claim an open task (set themselves as worker)
+
+    if (isClaimingTask) {
+      // Someone is claiming the task - they become the worker
+      if (existingTask.status !== 'OPEN') {
+        return res.status(403).json({
+          success: false,
+          error: 'Can only claim open tasks'
+        });
+      }
+    } else if (proofHash || status === 'SUBMITTED') {
+      // Submitting work - must be the assigned worker
+      if (!isWorker) {
+        return res.status(403).json({
+          success: false,
+          error: 'Only assigned worker can submit work'
+        });
+      }
+    } else if (status === 'VERIFIED' || status === 'DISPUTED' || status === 'COMPLETED') {
+      // Verifying work - must be the requester
+      if (!isRequester) {
+        return res.status(403).json({
+          success: false,
+          error: 'Only task requester can verify work'
+        });
+      }
+    } else if (!isRequester && !isWorker) {
+      // For other updates, must be either requester or worker
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized to update this task'
+      });
+    }
 
     const task = await prisma.task.update({
       where: { id },
@@ -243,6 +292,7 @@ router.put('/:id', authenticate, async (req, res) => {
     });
   }
 });
+
 
 /**
  * POST /api/tasks/sync
