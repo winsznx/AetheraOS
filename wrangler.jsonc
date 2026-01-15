@@ -1,5 +1,5 @@
 {
-  "name": "aetheraos-autonomous-agent",
+  "name": "chainintel-mcp",
   "main": "autonomous-agent/src/worker.ts",
   "compatibility_date": "2024-11-27",
   "compatibility_flags": ["nodejs_compat"],
