@@ -209,7 +209,7 @@ export default function Sidebar({ collapsed = false, onToggle, mobileOpen = fals
             <div className="font-medium text-brand-black dark:text-white mb-1">
               Beta v0.1.0
             </div>
-            <div>© 2025 AetheraOS</div>
+            <div>© 2026 AetheraOS</div>
           </div>
         )}
       </div>
